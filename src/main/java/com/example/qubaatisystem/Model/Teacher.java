@@ -34,4 +34,12 @@ public class Teacher {
     // Teacher has many Classrooms (inverse side)
     @OneToMany(mappedBy = "teacher", fetch = FetchType.LAZY)
     private Set<Classroom> classrooms;
+
+    // Teacher has many ActivityAssignments they assigned (inverse side)
+    @OneToMany(mappedBy = "assignedByTeacher", fetch = FetchType.LAZY)
+    private Set<ActivityAssignment> activityAssignments;
+
+    // Teacher has many ActivityReviews (inverse side)
+    @OneToMany(mappedBy = "teacher", fetch = FetchType.LAZY)
+    private Set<ActivityReview> activityReviews;
 }

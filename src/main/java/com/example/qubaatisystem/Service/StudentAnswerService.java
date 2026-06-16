@@ -3,10 +3,14 @@ package com.example.qubaatisystem.Service;
 import com.example.qubaatisystem.Api.ApiException;
 import com.example.qubaatisystem.DTO.In.StudentAnswerInDTO;
 import com.example.qubaatisystem.DTO.Out.StudentAnswerOutDTO;
+import com.example.qubaatisystem.Model.ActivitySubmission;
 import com.example.qubaatisystem.Model.Question;
+import com.example.qubaatisystem.Model.Student;
 import com.example.qubaatisystem.Model.StudentAnswer;
+import com.example.qubaatisystem.Repository.ActivitySubmissionRepository;
 import com.example.qubaatisystem.Repository.QuestionRepository;
 import com.example.qubaatisystem.Repository.StudentAnswerRepository;
+import com.example.qubaatisystem.Repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
@@ -19,6 +23,8 @@ public class StudentAnswerService {
 
     private final StudentAnswerRepository studentAnswerRepository;
     private final QuestionRepository questionRepository;
+    private final StudentRepository studentRepository;
+    private final ActivitySubmissionRepository activitySubmissionRepository;
     private final ModelMapper modelMapper;
 
     public List<StudentAnswerOutDTO> getAll() {
@@ -36,27 +42,29 @@ public class StudentAnswerService {
         return toOut(studentAnswers.get(0));
     }
 
-    public void create(StudentAnswerInDTO studentAnswerInDTO) {
-        StudentAnswer studentAnswer = modelMapper.map(studentAnswerInDTO, StudentAnswer.class);
+    public void create(StudentAnswerInDTO dto) {
+        StudentAnswer studentAnswer = modelMapper.map(dto, StudentAnswer.class);
 
-        applyRelationships(studentAnswer, studentAnswerInDTO);
+        applyRelationships(studentAnswer, dto);
 
         studentAnswerRepository.save(studentAnswer);
     }
 
-    public void update(Integer id, StudentAnswerInDTO studentAnswerInDTO) {
+    public void update(Integer id, StudentAnswerInDTO dto) {
         List<StudentAnswer> studentAnswers = studentAnswerRepository.findStudentAnswerById(id);
         if (studentAnswers.isEmpty()) {
             throw new ApiException("StudentAnswer with id " + id + " not found");
         }
         StudentAnswer studentAnswer = studentAnswers.get(0);
 
-        // Clear relationships first so ModelMapper only copies scalar fields
+        // Clear owning relations first so ModelMapper only copies scalar fields
         // (never mutates the ids of the currently-managed related entities).
         studentAnswer.setQuestion(null);
-        modelMapper.map(studentAnswerInDTO, studentAnswer);
+        studentAnswer.setStudent(null);
+        studentAnswer.setActivitySubmission(null);
+        modelMapper.map(dto, studentAnswer);
 
-        applyRelationships(studentAnswer, studentAnswerInDTO);
+        applyRelationships(studentAnswer, dto);
 
         studentAnswerRepository.save(studentAnswer);
     }
@@ -78,11 +86,32 @@ public class StudentAnswerService {
             throw new ApiException("Question with id " + dto.getQuestionId() + " not found");
         }
         studentAnswer.setQuestion(questions.get(0));
+
+        List<Student> students = studentRepository.findStudentById(dto.getStudentId());
+        if (students.isEmpty()) {
+            throw new ApiException("Student with id " + dto.getStudentId() + " not found");
+        }
+        studentAnswer.setStudent(students.get(0));
+
+        List<ActivitySubmission> submissions = activitySubmissionRepository.findActivitySubmissionById(dto.getActivitySubmissionId());
+        if (submissions.isEmpty()) {
+            throw new ApiException("ActivitySubmission with id " + dto.getActivitySubmissionId() + " not found");
+        }
+        studentAnswer.setActivitySubmission(submissions.get(0));
     }
 
     private StudentAnswerOutDTO toOut(StudentAnswer studentAnswer) {
         StudentAnswerOutDTO out = modelMapper.map(studentAnswer, StudentAnswerOutDTO.class);
-        // No derived display fields to set manually (questionId is auto-flattened by ModelMapper).
+        if (studentAnswer.getQuestion() != null) {
+            out.setQuestionId(studentAnswer.getQuestion().getId());
+        }
+        if (studentAnswer.getStudent() != null) {
+            out.setStudentId(studentAnswer.getStudent().getId());
+            out.setStudentName(studentAnswer.getStudent().getFullName());
+        }
+        if (studentAnswer.getActivitySubmission() != null) {
+            out.setActivitySubmissionId(studentAnswer.getActivitySubmission().getId());
+        }
         return out;
     }
 }

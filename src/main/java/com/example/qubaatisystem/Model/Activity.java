@@ -58,4 +58,12 @@ public class Activity {
     // Activity has many Questions (inverse side)
     @OneToMany(mappedBy = "activity", fetch = FetchType.LAZY)
     private Set<Question> questions;
+
+    // Activity has many ActivityAssignments (inverse side)
+    @OneToMany(mappedBy = "activity", fetch = FetchType.LAZY)
+    private Set<ActivityAssignment> activityAssignments;
+
+    // Activity has many ActivityReviews (inverse side)
+    @OneToMany(mappedBy = "activity", fetch = FetchType.LAZY)
+    private Set<ActivityReview> activityReviews;
 }

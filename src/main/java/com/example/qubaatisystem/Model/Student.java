@@ -35,8 +35,7 @@ public class Student {
     @Column(nullable = false)
     private Integer completedMissionsCount;
 
-    // Student belongs to one User (owning side). The account is created for the child by the Parent;
-    // the student does not create it. The student logs in later with this account.
+    // Student belongs to one User (owning side). The account is created for the child by the Parent.
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
@@ -58,4 +57,24 @@ public class Student {
     // Student has one LearningStyle (inverse side)
     @OneToOne(mappedBy = "student", fetch = FetchType.LAZY)
     private LearningStyle learningStyle;
+
+    // Student has many ActivitySubmissions (inverse side)
+    @OneToMany(mappedBy = "student", fetch = FetchType.LAZY)
+    private Set<ActivitySubmission> activitySubmissions;
+
+    // Student has many Recommendations (inverse side)
+    @OneToMany(mappedBy = "student", fetch = FetchType.LAZY)
+    private Set<Recommendation> recommendations;
+
+    // Student has many SkillProgressHistory entries (inverse side)
+    @OneToMany(mappedBy = "student", fetch = FetchType.LAZY)
+    private Set<SkillProgressHistory> skillProgressHistory;
+
+    // Student has many LearningStyleHistory entries (inverse side)
+    @OneToMany(mappedBy = "student", fetch = FetchType.LAZY)
+    private Set<LearningStyleHistory> learningStyleHistory;
+
+    // Student has many StudentAnswers (inverse side)
+    @OneToMany(mappedBy = "student", fetch = FetchType.LAZY)
+    private Set<StudentAnswer> studentAnswers;
 }

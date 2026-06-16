@@ -1,5 +1,6 @@
 package com.example.qubaatisystem.DTO.In;
 
+import com.example.qubaatisystem.Enum.AnswerStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -22,6 +23,15 @@ public class StudentAnswerInDTO {
     @PositiveOrZero(message = "earnedPoints must be zero or positive")
     private Integer earnedPoints;
 
+    @NotNull(message = "status is required")
+    private AnswerStatus status;
+
     @NotNull(message = "questionId is required")
     private Integer questionId;
+
+    @NotNull(message = "studentId is required")
+    private Integer studentId;
+
+    @NotNull(message = "activitySubmissionId is required")
+    private Integer activitySubmissionId;
 }

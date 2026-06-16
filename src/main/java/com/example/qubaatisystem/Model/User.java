@@ -7,6 +7,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.Set;
+
 @Entity
 @Table(name = "users")
 @Getter
@@ -31,4 +33,12 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private UserRole role;
+
+    // User receives many Notifications (inverse side)
+    @OneToMany(mappedBy = "recipient", fetch = FetchType.LAZY)
+    private Set<Notification> notifications;
+
+    // User is the actor of many AuditLogs (inverse side)
+    @OneToMany(mappedBy = "actor", fetch = FetchType.LAZY)
+    private Set<AuditLog> auditLogs;
 }

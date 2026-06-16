@@ -1,8 +1,11 @@
 package com.example.qubaatisystem.DTO.Out;
 
+import com.example.qubaatisystem.Enum.AnswerStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -13,6 +16,13 @@ public class StudentAnswerOutDTO {
     private String answerText;
     private Boolean isCorrect;
     private Integer earnedPoints;
-    private java.time.LocalDateTime answeredAt;
+    private AnswerStatus status;
+    private LocalDateTime answeredAt;
+
     private Integer questionId;
+
+    private Integer studentId;
+    private String studentName;
+
+    private Integer activitySubmissionId;
 }
