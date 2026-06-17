@@ -18,8 +18,6 @@ public class StudentAnswerInDTO {
     @Size(max = 2000, message = "answerText must be at most 2000 characters")
     private String answerText;
 
-    private Boolean isCorrect;
-
     @PositiveOrZero(message = "earnedPoints must be zero or positive")
     private Integer earnedPoints;
 

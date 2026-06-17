@@ -20,6 +20,4 @@ public class ActivityOutDTO {
     private DifficultyLevel difficulty;
     private Integer maxScore;
     private java.time.LocalDateTime createdAt;
-    private java.time.LocalDateTime reviewedAt;
-    private String reviewComment;
 }

@@ -49,12 +49,6 @@ public class Activity {
     @Column(nullable = false, updatable = false)
     private java.time.LocalDateTime createdAt;
 
-    @Column
-    private java.time.LocalDateTime reviewedAt;
-
-    @Column(length = 1000)
-    private String reviewComment;
-
     // Activity has many Questions (inverse side)
     @OneToMany(mappedBy = "activity", fetch = FetchType.LAZY)
     private Set<Question> questions;

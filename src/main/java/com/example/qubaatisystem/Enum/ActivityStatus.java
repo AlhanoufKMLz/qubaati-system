@@ -5,9 +5,5 @@ public enum ActivityStatus {
     PENDING_REVIEW,
     APPROVED,
     REJECTED,
-    ASSIGNED,
-    IN_PROGRESS,
-    SUBMITTED,
-    COMPLETED,
     ARCHIVED
 }

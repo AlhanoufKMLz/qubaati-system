@@ -24,9 +24,6 @@ public class StudentAnswer {
     private String answerText;
 
     @Column
-    private Boolean isCorrect;
-
-    @Column
     private Integer earnedPoints;
 
     @Enumerated(EnumType.STRING)
