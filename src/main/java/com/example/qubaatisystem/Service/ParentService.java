@@ -2,6 +2,7 @@ package com.example.qubaatisystem.Service;
 
 import com.example.qubaatisystem.Api.ApiException;
 import com.example.qubaatisystem.DTO.In.ChildCreateInDTO;
+import com.example.qubaatisystem.DTO.In.ChildUpdateProfileInDTO;
 import com.example.qubaatisystem.DTO.In.ParentInDTO;
 import com.example.qubaatisystem.DTO.In.StudentInDTO;
 import com.example.qubaatisystem.DTO.Out.ParentOutDTO;
@@ -128,6 +129,18 @@ public class ParentService {
             throw new ApiException("Student with id " + studentId + " does not belong to parent with id " + parentId);
         }
         return student;
+    }
+
+    @Transactional
+    public StudentOutDTO updateChildProfile(Integer parentId, Integer studentId, ChildUpdateProfileInDTO dto) {
+        if (parentRepository.findParentById(parentId) == null) {
+            throw new ApiException("Parent with id " + parentId + " not found");
+        }
+        StudentOutDTO student = studentService.getById(studentId);
+        if (!parentId.equals(student.getParentId())) {
+            throw new ApiException("Student with id " + studentId + " does not belong to parent with id " + parentId);
+        }
+        return studentService.updateProfile(studentId, dto);
     }
 
     // ---------- helpers ----------

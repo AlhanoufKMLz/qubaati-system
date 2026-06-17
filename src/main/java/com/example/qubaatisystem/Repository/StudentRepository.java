@@ -12,4 +12,8 @@ public interface StudentRepository extends JpaRepository<Student, Integer> {
     Student findStudentById(Integer id);
 
     List<Student> findByParentId(Integer parentId);
+
+    List<Student> findByClassroomId(Integer classroomId);
+
+    int countByClassroomTeacherId(Integer teacherId);
 }
