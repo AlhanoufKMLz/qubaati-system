@@ -36,6 +36,13 @@ public class StudentService {
                 .toList();
     }
 
+    public List<StudentOutDTO> getByParentId(Integer parentId) {
+        return studentRepository.findByParentId(parentId)
+                .stream()
+                .map(this::mapStudentToOutDTO)
+                .toList();
+    }
+
     public StudentOutDTO getById(Integer id) {
         Student student = studentRepository.findStudentById(id);
         if (student == null) {
@@ -55,8 +62,14 @@ public class StudentService {
         user.setRole(UserRole.STUDENT);
         User savedUser = userRepository.save(user);
 
-        // Create the Student profile (ModelMapper copies scalar fields only) and link the relations.
-        Student student = modelMapper.map(studentInDTO, Student.class);
+        // Build the Student profile by setting scalar fields directly to avoid ModelMapper
+        // token-matching ambiguity (parentId and classroomId both match Student.id).
+        Student student = new Student();
+        student.setFullName(studentInDTO.getFullName());
+        student.setAge(studentInDTO.getAge());
+        student.setGrade(studentInDTO.getGrade());
+        student.setTotalPoints(studentInDTO.getTotalPoints());
+        student.setCompletedMissionsCount(studentInDTO.getCompletedMissionsCount());
         applyDefaults(student);
         student.setUser(savedUser);
         student.setParent(resolveParent(studentInDTO.getParentId()));
@@ -73,11 +86,12 @@ public class StudentService {
             throw new ApiException("Student with id " + id + " not found");
         }
 
-        // Clear the owning relations first so ModelMapper only copies scalar fields
-        // (never mutates the ids of the currently-managed Parent/Classroom while flattening).
-        student.setParent(null);
-        student.setClassroom(null);
-        modelMapper.map(studentInDTO, student);
+        // Set scalar fields directly — same reason as create() (ModelMapper ambiguity on *Id fields).
+        student.setFullName(studentInDTO.getFullName());
+        student.setAge(studentInDTO.getAge());
+        student.setGrade(studentInDTO.getGrade());
+        student.setTotalPoints(studentInDTO.getTotalPoints());
+        student.setCompletedMissionsCount(studentInDTO.getCompletedMissionsCount());
         applyDefaults(student);
 
         // Update the linked User account fields, keeping the role as STUDENT.
