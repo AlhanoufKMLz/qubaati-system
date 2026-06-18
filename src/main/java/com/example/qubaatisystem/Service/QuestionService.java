@@ -41,6 +41,7 @@ public class QuestionService {
 
         applyRelationships(question, dto);
 
+        question.setId(null);
         questionRepository.save(question);
     }
 
@@ -54,6 +55,7 @@ public class QuestionService {
         // (never mutates the ids of the currently-managed related entities).
         question.setActivity(null);
         modelMapper.map(dto, question);
+        question.setId(id);
 
         applyRelationships(question, dto);
 

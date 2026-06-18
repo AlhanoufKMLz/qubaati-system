@@ -46,10 +46,20 @@ public class RecommendationService {
     }
 
     public void create(RecommendationInDTO dto) {
-        Recommendation recommendation = modelMapper.map(dto, Recommendation.class);
+        // Map scalar fields manually; relation ids are resolved in applyRelationships.
+        // (ModelMapper can't disambiguate the multiple *Id source fields against setId.)
+        Recommendation recommendation = new Recommendation();
+        recommendation.setTitle(dto.getTitle());
+        recommendation.setDescription(dto.getDescription());
+        recommendation.setType(dto.getType());
+        recommendation.setPriority(dto.getPriority());
+        recommendation.setStatus(dto.getStatus());
+        recommendation.setReason(dto.getReason());
+        recommendation.setGeneratedAt(dto.getGeneratedAt());
 
         applyRelationships(recommendation, dto);
 
+        recommendation.setId(null);
         recommendationRepository.save(recommendation);
     }
 
@@ -59,13 +69,15 @@ public class RecommendationService {
             throw new ApiException("Recommendation with id " + id + " not found");
         }
 
-        // Clear relationships first so ModelMapper only copies scalar fields
-        // (never mutates the ids of the currently-managed related entities).
-        recommendation.setStudent(null);
-        recommendation.setSkill(null);
-        recommendation.setMission(null);
-        recommendation.setActivity(null);
-        modelMapper.map(dto, recommendation);
+        // Map scalar fields manually; applyRelationships re-resolves the relations.
+        recommendation.setTitle(dto.getTitle());
+        recommendation.setDescription(dto.getDescription());
+        recommendation.setType(dto.getType());
+        recommendation.setPriority(dto.getPriority());
+        recommendation.setStatus(dto.getStatus());
+        recommendation.setReason(dto.getReason());
+        recommendation.setGeneratedAt(dto.getGeneratedAt());
+        recommendation.setId(id);
 
         applyRelationships(recommendation, dto);
 

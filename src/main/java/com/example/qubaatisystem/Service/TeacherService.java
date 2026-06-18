@@ -52,6 +52,7 @@ public class TeacherService {
         Teacher teacher = modelMapper.map(teacherInDTO, Teacher.class);
         teacher.setUser(savedUser);
 
+        teacher.setId(null);
         Teacher savedTeacher = teacherRepository.save(teacher);
         return mapTeacherToOutDTO(savedTeacher);
     }
@@ -65,6 +66,7 @@ public class TeacherService {
 
         // Update Teacher profile fields (ModelMapper copies scalar fields only).
         modelMapper.map(teacherInDTO, teacher);
+        teacher.setId(id);
 
         // Update the linked User account fields, keeping the role as TEACHER.
         User user = teacher.getUser();

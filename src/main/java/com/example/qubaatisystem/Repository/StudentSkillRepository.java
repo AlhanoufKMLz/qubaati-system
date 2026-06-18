@@ -8,4 +8,6 @@ import org.springframework.stereotype.Repository;
 public interface StudentSkillRepository extends JpaRepository<StudentSkill, Integer> {
 
     StudentSkill findStudentSkillById(Integer id);
+
+    StudentSkill findStudentSkillByStudentIdAndSkillId(Integer studentId, Integer skillId);
 }

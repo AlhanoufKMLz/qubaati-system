@@ -41,6 +41,7 @@ public class MissionService {
 
         applyRelationships(mission, dto);
 
+        mission.setId(null);
         missionRepository.save(mission);
     }
 
@@ -54,6 +55,7 @@ public class MissionService {
         // (never mutates the ids of the currently-managed related entities).
         mission.setCareerWorld(null);
         modelMapper.map(dto, mission);
+        mission.setId(id);
 
         applyRelationships(mission, dto);
 

@@ -41,6 +41,7 @@ public class ClassroomService {
 
         applyRelationships(classroom, classroomInDTO);
 
+        classroom.setId(null);
         classroomRepository.save(classroom);
     }
 
@@ -54,6 +55,7 @@ public class ClassroomService {
         // (never mutates the ids of the currently-managed related entities).
         classroom.setTeacher(null);
         modelMapper.map(classroomInDTO, classroom);
+        classroom.setId(id);
 
         applyRelationships(classroom, classroomInDTO);
 

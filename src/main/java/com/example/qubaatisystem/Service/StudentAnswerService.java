@@ -1,13 +1,19 @@
 package com.example.qubaatisystem.Service;
 
 import com.example.qubaatisystem.Api.ApiException;
+import com.example.qubaatisystem.DTO.In.BatchStudentAnswerInDTO;
+import com.example.qubaatisystem.DTO.In.SingleStudentAnswerInDTO;
 import com.example.qubaatisystem.DTO.In.StudentAnswerInDTO;
 import com.example.qubaatisystem.DTO.Out.StudentAnswerOutDTO;
+import com.example.qubaatisystem.Enum.AnswerStatus;
+import com.example.qubaatisystem.Enum.ActivitySubmissionStatus;
 import com.example.qubaatisystem.Model.ActivitySubmission;
+import com.example.qubaatisystem.Model.Option;
 import com.example.qubaatisystem.Model.Question;
 import com.example.qubaatisystem.Model.Student;
 import com.example.qubaatisystem.Model.StudentAnswer;
 import com.example.qubaatisystem.Repository.ActivitySubmissionRepository;
+import com.example.qubaatisystem.Repository.OptionRepository;
 import com.example.qubaatisystem.Repository.QuestionRepository;
 import com.example.qubaatisystem.Repository.StudentAnswerRepository;
 import com.example.qubaatisystem.Repository.StudentRepository;
@@ -15,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -25,6 +32,7 @@ public class StudentAnswerService {
     private final QuestionRepository questionRepository;
     private final StudentRepository studentRepository;
     private final ActivitySubmissionRepository activitySubmissionRepository;
+    private final OptionRepository optionRepository;
     private final ModelMapper modelMapper;
 
     public List<StudentAnswerOutDTO> getAll() {
@@ -43,10 +51,16 @@ public class StudentAnswerService {
     }
 
     public void create(StudentAnswerInDTO dto) {
-        StudentAnswer studentAnswer = modelMapper.map(dto, StudentAnswer.class);
+        // Map scalar fields manually; relation-id fields (questionId/studentId/activitySubmissionId)
+        // are resolved by applyRelationships, avoiding ModelMapper's ambiguous setId() matching.
+        StudentAnswer studentAnswer = new StudentAnswer();
+        studentAnswer.setAnswerText(dto.getAnswerText());
+        studentAnswer.setEarnedPoints(dto.getEarnedPoints());
+        studentAnswer.setStatus(dto.getStatus());
 
         applyRelationships(studentAnswer, dto);
 
+        studentAnswer.setId(null);
         studentAnswerRepository.save(studentAnswer);
     }
 
@@ -56,12 +70,11 @@ public class StudentAnswerService {
             throw new ApiException("StudentAnswer with id " + id + " not found");
         }
 
-        // Clear owning relations first so ModelMapper only copies scalar fields
-        // (never mutates the ids of the currently-managed related entities).
-        studentAnswer.setQuestion(null);
-        studentAnswer.setStudent(null);
-        studentAnswer.setActivitySubmission(null);
-        modelMapper.map(dto, studentAnswer);
+        // Map scalar fields manually; relations are re-resolved by applyRelationships.
+        studentAnswer.setAnswerText(dto.getAnswerText());
+        studentAnswer.setEarnedPoints(dto.getEarnedPoints());
+        studentAnswer.setStatus(dto.getStatus());
+        studentAnswer.setId(id);
 
         applyRelationships(studentAnswer, dto);
 
@@ -76,7 +89,76 @@ public class StudentAnswerService {
         studentAnswerRepository.delete(studentAnswer);
     }
 
-    // ---------- helpers ----------
+    // ====================== FLOW: BATCH ANSWERS ======================
+
+    public List<StudentAnswerOutDTO> saveBatchAnswers(Integer submissionId, BatchStudentAnswerInDTO dto) {
+        ActivitySubmission submission = activitySubmissionRepository.findActivitySubmissionById(submissionId);
+        if (submission == null) {
+            throw new ApiException("ActivitySubmission with id " + submissionId + " not found");
+        }
+        if (submission.getStatus() != ActivitySubmissionStatus.IN_PROGRESS) {
+            throw new ApiException("Answers can only be saved while the submission is IN_PROGRESS");
+        }
+        if (dto.getAnswers() == null || dto.getAnswers().isEmpty()) {
+            throw new ApiException("answers must not be empty");
+        }
+        if (submission.getActivityAssignment() == null || submission.getActivityAssignment().getActivity() == null) {
+            throw new ApiException("Submission is not linked to an activity");
+        }
+
+        Integer activityId = submission.getActivityAssignment().getActivity().getId();
+        Student student = submission.getStudent();
+
+        List<StudentAnswerOutDTO> results = new ArrayList<>();
+        for (SingleStudentAnswerInDTO answer : dto.getAnswers()) {
+            Question question = questionRepository.findQuestionById(answer.getQuestionId());
+            if (question == null) {
+                throw new ApiException("Question with id " + answer.getQuestionId() + " not found");
+            }
+            if (question.getActivity() == null || !question.getActivity().getId().equals(activityId)) {
+                throw new ApiException("Question " + answer.getQuestionId() + " does not belong to this submission's activity");
+            }
+
+            boolean hasText = answer.getAnswerText() != null && !answer.getAnswerText().isBlank();
+            if (!hasText && answer.getSelectedOptionId() == null) {
+                throw new ApiException("Each answer must provide answerText or selectedOptionId (question " + answer.getQuestionId() + ")");
+            }
+
+            String resolvedAnswerText = answer.getAnswerText();
+            if (answer.getSelectedOptionId() != null) {
+                Option option = optionRepository.findOptionById(answer.getSelectedOptionId());
+                if (option == null) {
+                    throw new ApiException("Option with id " + answer.getSelectedOptionId() + " not found");
+                }
+                if (option.getQuestion() == null || !option.getQuestion().getId().equals(question.getId())) {
+                    throw new ApiException("selectedOptionId " + answer.getSelectedOptionId() + " does not belong to question " + question.getId());
+                }
+                // StudentAnswer has no selected-option relation, so the chosen option's content is recorded
+                // as the answer text. TODO: add a selectedOption relation if a stronger link is needed.
+                if (!hasText) {
+                    resolvedAnswerText = option.getContent();
+                }
+            }
+
+            StudentAnswer existing = studentAnswerRepository
+                    .findStudentAnswerByActivitySubmissionIdAndQuestionId(submissionId, question.getId());
+            StudentAnswer studentAnswer = existing != null ? existing : new StudentAnswer();
+            studentAnswer.setActivitySubmission(submission);
+            studentAnswer.setQuestion(question);
+            if (student != null) {
+                studentAnswer.setStudent(student);
+            }
+            studentAnswer.setAnswerText(resolvedAnswerText);
+            // Saved draft answers are SAVED, not SUBMITTED — the student can still change them until final
+            // submit (which flips them to SUBMITTED and then evaluation sets CORRECT/INCORRECT).
+            studentAnswer.setStatus(AnswerStatus.SAVED);
+
+            results.add(toOut(studentAnswerRepository.save(studentAnswer)));
+        }
+        return results;
+    }
+
+    // ====================== helpers ======================
 
     // Relationship IDs from the input DTO are resolved manually (ModelMapper maps scalar fields only).
     private void applyRelationships(StudentAnswer studentAnswer, StudentAnswerInDTO dto) {

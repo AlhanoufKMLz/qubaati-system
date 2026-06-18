@@ -41,6 +41,7 @@ public class LearningStyleService {
 
         applyRelationships(learningStyle, dto);
 
+        learningStyle.setId(null);
         learningStyleRepository.save(learningStyle);
     }
 
@@ -54,6 +55,7 @@ public class LearningStyleService {
         // (never mutates the ids of the currently-managed related entities).
         learningStyle.setStudent(null);
         modelMapper.map(dto, learningStyle);
+        learningStyle.setId(id);
 
         applyRelationships(learningStyle, dto);
 

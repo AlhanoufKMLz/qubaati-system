@@ -41,6 +41,7 @@ public class InsightService {
 
         applyRelationships(insight, dto);
 
+        insight.setId(null);
         insightRepository.save(insight);
     }
 
@@ -54,6 +55,7 @@ public class InsightService {
         // (never mutates the ids of the currently-managed related entities).
         insight.setMissionSession(null);
         modelMapper.map(dto, insight);
+        insight.setId(id);
 
         applyRelationships(insight, dto);
 

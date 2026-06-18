@@ -1,0 +1,19 @@
+package com.example.qubaatisystem.DTO.In;
+
+import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class ActivityAssignmentDeadlineInDTO {
+
+    @NotNull(message = "dueDate is required")
+    @Future(message = "dueDate must be in the future")
+    private LocalDateTime dueDate;
+}

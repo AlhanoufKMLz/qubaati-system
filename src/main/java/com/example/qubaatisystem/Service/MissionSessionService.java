@@ -41,6 +41,7 @@ public class MissionSessionService {
 
         applyRelationships(missionSession, dto);
 
+        missionSession.setId(null);
         missionSessionRepository.save(missionSession);
     }
 
@@ -54,6 +55,7 @@ public class MissionSessionService {
         // (never mutates the ids of the currently-managed related entities).
         missionSession.setMission(null);
         modelMapper.map(dto, missionSession);
+        missionSession.setId(id);
 
         applyRelationships(missionSession, dto);
 

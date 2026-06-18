@@ -41,6 +41,7 @@ public class NotificationService {
 
         applyRelationships(notification, dto);
 
+        notification.setId(null);
         notificationRepository.save(notification);
     }
 
@@ -54,6 +55,7 @@ public class NotificationService {
         // (never mutates the ids of the currently-managed related entities).
         notification.setRecipient(null);
         modelMapper.map(dto, notification);
+        notification.setId(id);
 
         applyRelationships(notification, dto);
 

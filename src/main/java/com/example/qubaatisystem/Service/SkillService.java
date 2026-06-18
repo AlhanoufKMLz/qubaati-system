@@ -33,6 +33,7 @@ public class SkillService {
     public void create(SkillInDTO dto) {
         Skill skill = modelMapper.map(dto, Skill.class);
 
+        skill.setId(null);
         skillRepository.save(skill);
     }
 
@@ -43,6 +44,7 @@ public class SkillService {
         }
 
         modelMapper.map(dto, skill);
+        skill.setId(id);
 
         skillRepository.save(skill);
     }

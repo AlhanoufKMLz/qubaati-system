@@ -20,6 +20,7 @@ public class ActivitySubmissionOutDTO {
     private Integer activityAssignmentId;
     private Integer activityId;
     private String activityTitle;
+    private Integer activityMaxScore;
     private Integer studentId;
     private String studentName;
 }

@@ -52,6 +52,7 @@ public class ParentService {
         Parent parent = modelMapper.map(parentInDTO, Parent.class);
         parent.setUser(savedUser);
 
+        parent.setId(null);
         Parent savedParent = parentRepository.save(parent);
         return mapParentToOutDTO(savedParent);
     }
@@ -65,6 +66,7 @@ public class ParentService {
 
         // Update Parent profile fields (ModelMapper copies scalar fields only).
         modelMapper.map(parentInDTO, parent);
+        parent.setId(id);
 
         // Update the linked User account fields, keeping the role as PARENT.
         User user = parent.getUser();

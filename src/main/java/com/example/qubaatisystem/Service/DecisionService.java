@@ -41,6 +41,7 @@ public class DecisionService {
 
         applyRelationships(decision, decisionInDTO);
 
+        decision.setId(null);
         decisionRepository.save(decision);
     }
 
@@ -54,6 +55,7 @@ public class DecisionService {
         // (never mutates the id of the currently-managed related entity).
         decision.setMissionSession(null);
         modelMapper.map(decisionInDTO, decision);
+        decision.setId(id);
 
         applyRelationships(decision, decisionInDTO);
 

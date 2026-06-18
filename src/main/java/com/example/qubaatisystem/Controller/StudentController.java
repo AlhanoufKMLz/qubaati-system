@@ -22,6 +22,8 @@ public class StudentController {
 
     private final StudentService studentService;
 
+    // ---------- CRUD ----------
+
     @PostMapping
     public ResponseEntity<?> create(@Valid @RequestBody StudentInDTO dto) {
         return ResponseEntity.status(200).body(studentService.create(dto));
@@ -46,5 +48,22 @@ public class StudentController {
     public ResponseEntity<?> delete(@PathVariable Integer id) {
         studentService.delete(id);
         return ResponseEntity.status(200).body(new ApiResponse("Student deleted successfully"));
+    }
+
+    // ---------- AVAILABILITY / HISTORY ----------
+
+    @GetMapping("/{studentId}/career-worlds/available")
+    public ResponseEntity<?> getAvailableCareerWorlds(@PathVariable Integer studentId) {
+        return ResponseEntity.status(200).body(studentService.getAvailableCareerWorlds(studentId));
+    }
+
+    @GetMapping("/{studentId}/skills/history")
+    public ResponseEntity<?> getSkillHistory(@PathVariable Integer studentId) {
+        return ResponseEntity.status(200).body(studentService.getSkillHistory(studentId));
+    }
+
+    @GetMapping("/{studentId}/learning-style/history")
+    public ResponseEntity<?> getLearningStyleHistory(@PathVariable Integer studentId) {
+        return ResponseEntity.status(200).body(studentService.getLearningStyleHistory(studentId));
     }
 }

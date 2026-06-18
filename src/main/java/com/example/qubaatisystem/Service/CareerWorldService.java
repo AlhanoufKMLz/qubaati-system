@@ -36,6 +36,7 @@ public class CareerWorldService {
     public void create(CareerWorldInDTO dto) {
         CareerWorld careerWorld = modelMapper.map(dto, CareerWorld.class);
 
+        careerWorld.setId(null);
         careerWorldRepository.save(careerWorld);
     }
 
@@ -46,6 +47,7 @@ public class CareerWorldService {
         }
 
         modelMapper.map(dto, careerWorld);
+        careerWorld.setId(id);
 
         careerWorldRepository.save(careerWorld);
     }

@@ -8,4 +8,6 @@ import org.springframework.stereotype.Repository;
 public interface LearningStyleRepository extends JpaRepository<LearningStyle, Integer> {
 
     LearningStyle findLearningStyleById(Integer id);
+
+    LearningStyle findLearningStyleByStudentId(Integer studentId);
 }

@@ -41,6 +41,7 @@ public class OptionService {
 
         applyRelationships(option, optionInDTO);
 
+        option.setId(null);
         optionRepository.save(option);
     }
 
@@ -54,6 +55,7 @@ public class OptionService {
         // (never mutates the ids of the currently-managed related entities).
         option.setQuestion(null);
         modelMapper.map(optionInDTO, option);
+        option.setId(id);
 
         applyRelationships(option, optionInDTO);
 

@@ -1,7 +1,9 @@
 package com.example.qubaatisystem.Controller;
 
 import com.example.qubaatisystem.Api.ApiResponse;
+import com.example.qubaatisystem.DTO.In.BatchStudentAnswerInDTO;
 import com.example.qubaatisystem.DTO.In.StudentAnswerInDTO;
+import com.example.qubaatisystem.DTO.Out.StudentAnswerOutDTO;
 import com.example.qubaatisystem.Service.StudentAnswerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,38 +17,51 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("/api/v1/student-answers")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class StudentAnswerController {
 
     private final StudentAnswerService studentAnswerService;
 
-    @PostMapping
+    // ---------- CRUD ----------
+
+    @PostMapping("/student-answers")
     public ResponseEntity<?> create(@Valid @RequestBody StudentAnswerInDTO dto) {
         studentAnswerService.create(dto);
         return ResponseEntity.status(200).body(new ApiResponse("StudentAnswer created successfully"));
     }
 
-    @GetMapping
+    @GetMapping("/student-answers")
     public ResponseEntity<?> getAll() {
         return ResponseEntity.status(200).body(studentAnswerService.getAll());
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/student-answers/{id}")
     public ResponseEntity<?> getById(@PathVariable Integer id) {
         return ResponseEntity.status(200).body(studentAnswerService.getById(id));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/student-answers/{id}")
     public ResponseEntity<?> update(@PathVariable Integer id, @Valid @RequestBody StudentAnswerInDTO dto) {
         studentAnswerService.update(id, dto);
         return ResponseEntity.status(200).body(new ApiResponse("StudentAnswer updated successfully"));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/student-answers/{id}")
     public ResponseEntity<?> delete(@PathVariable Integer id) {
         studentAnswerService.delete(id);
         return ResponseEntity.status(200).body(new ApiResponse("StudentAnswer deleted successfully"));
+    }
+
+    // ---------- FLOW: BATCH ANSWERS ----------
+
+    @PostMapping("/activity-submissions/{submissionId}/answers/batch")
+    public ResponseEntity<List<StudentAnswerOutDTO>> saveBatchAnswers(
+            @PathVariable Integer submissionId,
+            @Valid @RequestBody BatchStudentAnswerInDTO dto) {
+        return ResponseEntity.status(200).body(studentAnswerService.saveBatchAnswers(submissionId, dto));
     }
 }

@@ -41,6 +41,7 @@ public class AuditLogService {
 
         applyRelationships(auditLog, dto);
 
+        auditLog.setId(null);
         auditLogRepository.save(auditLog);
     }
 
@@ -54,6 +55,7 @@ public class AuditLogService {
         // (never mutates the ids of the currently-managed related entities).
         auditLog.setActor(null);
         modelMapper.map(dto, auditLog);
+        auditLog.setId(id);
 
         applyRelationships(auditLog, dto);
 

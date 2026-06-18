@@ -1,0 +1,756 @@
+{
+  "info": {
+    "name": "Qubaati System - Full Flow Check",
+    "description": "End-to-end verification of the Qubaati activity flow: setup data, AI generation/refinement, review/approval, assignment, student submission, AI evaluation/feedback, return/reopen, and the extra availability/history endpoints. No security is enabled, so teacherId/studentId/etc. are passed explicitly. IDs are saved into collection variables by test scripts.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api/v1" },
+    { "key": "teacherId", "value": "" },
+    { "key": "parentId", "value": "" },
+    { "key": "studentId", "value": "" },
+    { "key": "student2Id", "value": "" },
+    { "key": "classroomId", "value": "" },
+    { "key": "careerWorldId", "value": "" },
+    { "key": "skillId", "value": "" },
+    { "key": "activityId", "value": "" },
+    { "key": "revisionActivityId", "value": "" },
+    { "key": "thirdActivityId", "value": "" },
+    { "key": "assignmentId", "value": "" },
+    { "key": "submissionId", "value": "" },
+    { "key": "questionId", "value": "" },
+    { "key": "optionId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Setup / Data Injection",
+      "item": [
+        {
+          "name": "Create Teacher (Noura Alharbi)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"username\":\"noura.physics\",\"email\":\"noura.physics@example.com\",\"password\":\"Pass@12345\",\"fullName\":\"Noura Alharbi\",\"specialization\":\"Physics\"}" },
+            "url": "{{baseUrl}}/teachers"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+            "pm.test('has id', () => pm.expect(json).to.have.property('id'));",
+            "if (json && json.id) pm.collectionVariables.set('teacherId', json.id);"
+          ] } } ]
+        },
+        {
+          "name": "Create Parent (Sarah Alqahtani)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"username\":\"sarah.parent\",\"email\":\"sarah.parent@example.com\",\"password\":\"Pass@12345\",\"fullName\":\"Sarah Alqahtani\",\"phoneNumber\":\"0501234567\"}" },
+            "url": "{{baseUrl}}/parents"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+            "pm.test('has id', () => pm.expect(json).to.have.property('id'));",
+            "if (json && json.id) pm.collectionVariables.set('parentId', json.id);"
+          ] } } ]
+        },
+        {
+          "name": "Create Classroom (Grade 6 Physics Explorers)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"name\":\"Grade 6 Physics Explorers\",\"gradeLevel\":6,\"section\":\"A\",\"teacherId\":{{teacherId}}}" },
+            "url": "{{baseUrl}}/classrooms"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('status 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));"
+          ] } } ]
+        },
+        {
+          "name": "Get Classrooms (save classroomId)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/classrooms" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "const c = Array.isArray(json) ? json.find(x => x.name === 'Grade 6 Physics Explorers') : null;",
+            "pm.test('classroom found', () => pm.expect(c, 'classroom').to.not.be.undefined);",
+            "if (c) pm.collectionVariables.set('classroomId', c.id);"
+          ] } } ]
+        },
+        {
+          "name": "Create CareerWorld (Engineering World)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"title\":\"Engineering World\",\"category\":\"STEM\",\"description\":\"A world where students solve engineering and physics challenges.\"}" },
+            "url": "{{baseUrl}}/career-worlds"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('status 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));"
+          ] } } ]
+        },
+        {
+          "name": "Get CareerWorlds (save careerWorldId)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/career-worlds" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "const cw = Array.isArray(json) ? json.find(x => x.title === 'Engineering World') : null;",
+            "if (cw) pm.collectionVariables.set('careerWorldId', cw.id);"
+          ] } } ]
+        },
+        {
+          "name": "Create Skill (Problem Solving)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"name\":\"Problem Solving\",\"description\":\"Ability to solve quantitative and logical problems.\",\"skillType\":\"PROBLEM_SOLVING\"}" },
+            "url": "{{baseUrl}}/skills"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('status 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));"
+          ] } } ]
+        },
+        {
+          "name": "Get Skills (save skillId)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/skills" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "const s = Array.isArray(json) ? json.find(x => x.name === 'Problem Solving') : null;",
+            "if (s) pm.collectionVariables.set('skillId', s.id);"
+          ] } } ]
+        },
+        {
+          "name": "Create Student (Faisal Alqahtani)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"username\":\"faisal.student\",\"email\":\"faisal.student@example.com\",\"password\":\"Pass@12345\",\"fullName\":\"Faisal Alqahtani\",\"age\":12,\"grade\":\"Grade 6\",\"parentId\":{{parentId}},\"classroomId\":{{classroomId}}}" },
+            "url": "{{baseUrl}}/students"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+            "pm.test('has id', () => pm.expect(json).to.have.property('id'));",
+            "if (json && json.id) pm.collectionVariables.set('studentId', json.id);"
+          ] } } ]
+        },
+        {
+          "name": "Create Second Student (Lina Alqahtani)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"username\":\"lina.student\",\"email\":\"lina.student@example.com\",\"password\":\"Pass@12345\",\"fullName\":\"Lina Alqahtani\",\"age\":12,\"grade\":\"Grade 6\",\"parentId\":{{parentId}},\"classroomId\":{{classroomId}}}" },
+            "url": "{{baseUrl}}/students"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+            "if (json && json.id) pm.collectionVariables.set('student2Id', json.id);"
+          ] } } ]
+        },
+        {
+          "name": "Create Learning Style (Faisal)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"primaryStyle\":\"READ_WRITE\",\"secondaryStyle\":\"VISUAL\",\"confidence\":0.6,\"studentId\":{{studentId}}}" },
+            "url": "{{baseUrl}}/learning-styles"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('status 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));"
+          ] } } ]
+        },
+        {
+          "name": "Create Skill Progress History row",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"previousScore\":50.0,\"newScore\":75.0,\"previousLevel\":1,\"newLevel\":2,\"reason\":\"Improved problem solving after the physics activity\",\"studentId\":{{studentId}},\"skillId\":{{skillId}}}" },
+            "url": "{{baseUrl}}/skill-progress-history"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('status 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));"
+          ] } } ]
+        },
+        {
+          "name": "Create Learning Style History row",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"previousPrimaryStyle\":\"VISUAL\",\"newPrimaryStyle\":\"KINESTHETIC\",\"previousSecondaryStyle\":\"AUDITORY\",\"newSecondaryStyle\":\"READ_WRITE\",\"previousConfidence\":0.6,\"newConfidence\":0.8,\"reason\":\"Detected a stronger kinesthetic preference during practice\",\"studentId\":{{studentId}}}" },
+            "url": "{{baseUrl}}/learning-style-history"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('status 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));"
+          ] } } ]
+        }
+      ]
+    },
+    {
+      "name": "2. AI Activity Generation",
+      "item": [
+        {
+          "name": "Generate Activity (EN)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"topic\":\"Speed, Distance, and Time for Grade 6\",\"description\":\"A short quiz about the relationship between speed, distance, and time.\",\"type\":\"QUIZ\",\"difficulty\":\"EASY\",\"questionCount\":3,\"maxScore\":10}" },
+            "url": "{{baseUrl}}/ai/activities/generate?language=en"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+            "pm.test('has id', () => pm.expect(json).to.have.property('id'));",
+            "pm.test('status is PENDING_REVIEW (auto-submitted to review)', () => pm.expect(json.status).to.eql('PENDING_REVIEW'));",
+            "pm.test('has nested questions', () => pm.expect(json.questions).to.be.an('array').that.is.not.empty);",
+            "pm.test('description is clean plain text', () => {",
+            "  pm.expect(json.description).to.be.a('string');",
+            "  pm.expect(json.description).to.not.include('\\n');",
+            "  pm.expect(json.description).to.not.include('\\\\n');",
+            "  pm.expect(json.description).to.not.include('**');",
+            "  pm.expect(json.description).to.not.include('#');",
+            "  pm.expect(json.description).to.not.include('Here is');",
+            "  pm.expect(json.description).to.not.include('If you want');",
+            "});",
+            "pm.test('question content is not placeholder text', () => {",
+            "  const q = (json.questions || [])[0] || {};",
+            "  pm.expect(q.content || '').to.not.match(/^Question \\d+ about/);",
+            "});",
+            "pm.test('english response omits fieldLabels', () => pm.expect(json).to.not.have.property('fieldLabels'));",
+            "if (json && json.id) pm.collectionVariables.set('activityId', json.id);",
+            "if (json.questions && json.questions.length) {",
+            "  const q = json.questions[0];",
+            "  pm.collectionVariables.set('questionId', q.id);",
+            "  const opts = q.options || [];",
+            "  const correct = opts.find(o => o.isCorrect) || opts[0];",
+            "  if (correct) pm.collectionVariables.set('optionId', correct.id);",
+            "}"
+          ] } } ]
+        },
+        {
+          "name": "Refine Activity (AR)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"instruction\":\"Make it clearer and more suitable for Grade 6 students\"}" },
+            "url": "{{baseUrl}}/ai/activities/{{activityId}}/refine?language=ar"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('same activity id', () => pm.expect(String(json.id)).to.eql(String(pm.collectionVariables.get('activityId'))));",
+            "pm.test('refine returns it to PENDING_REVIEW', () => pm.expect(json.status).to.eql('PENDING_REVIEW'));",
+            "pm.test('has nested questions', () => pm.expect(json.questions).to.be.an('array'));",
+            "pm.test('description is clean plain text', () => {",
+            "  pm.expect(json.description).to.be.a('string');",
+            "  pm.expect(json.description).to.not.include('\\n');",
+            "  pm.expect(json.description).to.not.include('\\\\n');",
+            "  pm.expect(json.description).to.not.include('**');",
+            "  pm.expect(json.description).to.not.include('إليك');",
+            "  pm.expect(json.description).to.not.include('إذا أردت');",
+            "});",
+            "pm.test('arabic response includes localized fieldLabels', () => {",
+            "  pm.expect(json).to.have.property('fieldLabels');",
+            "  pm.expect(json.fieldLabels.title).to.eql('العنوان');",
+            "  pm.expect(json.fieldLabels.description).to.eql('الوصف');",
+            "});"
+          ] } } ]
+        },
+        {
+          "name": "Get Activity Details (teacher, after generate)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/activities/{{activityId}}/details?language=en" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('has questions', () => pm.expect(json.questions).to.be.an('array').that.is.not.empty);",
+            "pm.test('questions have options', () => pm.expect(json.questions[0].options).to.be.an('array').that.is.not.empty);",
+            "pm.test('teacher view exposes correctAnswer', () => pm.expect(json.questions[0]).to.have.property('correctAnswer'));",
+            "pm.test('teacher view exposes isCorrect', () => pm.expect(json.questions[0].options[0]).to.have.property('isCorrect'));"
+          ] } } ]
+        }
+      ]
+    },
+    {
+      "name": "3. Approval Flow",
+      "item": [
+        {
+          "name": "Assign before approval (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"assignedByTeacherId\":{{teacherId}},\"dueDate\":\"2027-01-15T10:00:00\"}" },
+            "url": "{{baseUrl}}/activities/{{activityId}}/assign/students/{{studentId}}"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('assigning a non-APPROVED (PENDING_REVIEW) activity fails with 400', () => pm.response.to.have.status(400));"
+          ] } } ]
+        },
+        {
+          "name": "Get Review Queue",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/activities/review-queue" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "const id = pm.collectionVariables.get('activityId');",
+            "pm.test('review queue contains the activity', () => pm.expect(json.some(a => String(a.id) === String(id))).to.be.true);"
+          ] } } ]
+        },
+        {
+          "name": "Approve Activity",
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"teacherId\":{{teacherId}},\"reviewComment\":\"Approved for Grade 6 physics practice\"}" },
+            "url": "{{baseUrl}}/activities/{{activityId}}/approve"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('approval succeeds', () => pm.response.to.have.status(200));"
+          ] } } ]
+        },
+        {
+          "name": "Get Review History (APPROVED)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/activities/{{activityId}}/review-history" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('review history contains APPROVED', () => pm.expect(json.some(r => r.decision === 'APPROVED')).to.be.true);"
+          ] } } ]
+        },
+        {
+          "name": "Get Activity Details (teacher, after approve)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/activities/{{activityId}}/details?language=en" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('status is APPROVED', () => pm.expect(json.status).to.eql('APPROVED'));",
+            "pm.test('still has questions and options', () => pm.expect(json.questions[0].options).to.be.an('array').that.is.not.empty);",
+            "pm.test('teacher view still exposes correctAnswer', () => pm.expect(json.questions[0]).to.have.property('correctAnswer'));"
+          ] } } ]
+        }
+      ]
+    },
+    {
+      "name": "4. Request Revision / Reject Flow",
+      "item": [
+        {
+          "name": "Generate Second Activity (revisionActivityId)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"topic\":\"Forces and Motion for Grade 6\",\"description\":\"A short quiz about forces and motion.\",\"type\":\"QUIZ\",\"difficulty\":\"EASY\",\"questionCount\":3,\"maxScore\":10}" },
+            "url": "{{baseUrl}}/ai/activities/generate?language=en"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+            "pm.test('auto-submitted to PENDING_REVIEW', () => pm.expect(json.status).to.eql('PENDING_REVIEW'));",
+            "if (json && json.id) pm.collectionVariables.set('revisionActivityId', json.id);"
+          ] } } ]
+        },
+        {
+          "name": "Request Revision",
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"teacherId\":{{teacherId}},\"reviewComment\":\"Please simplify the wording and add clearer options\"}" },
+            "url": "{{baseUrl}}/activities/{{revisionActivityId}}/request-revision"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('revision request succeeds', () => pm.response.to.have.status(200));"
+          ] } } ]
+        },
+        {
+          "name": "Get Revision Review History (REVISION_REQUESTED)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/activities/{{revisionActivityId}}/review-history" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('history contains REVISION_REQUESTED', () => pm.expect(json.some(r => r.decision === 'REVISION_REQUESTED')).to.be.true);"
+          ] } } ]
+        },
+        {
+          "name": "Generate Third Activity (thirdActivityId)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"topic\":\"Energy for Grade 6\",\"description\":\"A short quiz about energy.\",\"type\":\"QUIZ\",\"difficulty\":\"EASY\",\"questionCount\":3,\"maxScore\":10}" },
+            "url": "{{baseUrl}}/ai/activities/generate?language=en"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+            "pm.test('auto-submitted to PENDING_REVIEW', () => pm.expect(json.status).to.eql('PENDING_REVIEW'));",
+            "if (json && json.id) pm.collectionVariables.set('thirdActivityId', json.id);"
+          ] } } ]
+        },
+        {
+          "name": "Reject Activity",
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"teacherId\":{{teacherId}},\"reviewComment\":\"The activity does not match the learning objective\"}" },
+            "url": "{{baseUrl}}/activities/{{thirdActivityId}}/reject"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('rejection succeeds', () => pm.response.to.have.status(200));"
+          ] } } ]
+        },
+        {
+          "name": "Get Third Review History (REJECTED)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/activities/{{thirdActivityId}}/review-history" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('history contains REJECTED', () => pm.expect(json.some(r => r.decision === 'REJECTED')).to.be.true);"
+          ] } } ]
+        }
+      ]
+    },
+    {
+      "name": "5. Assignment Flow",
+      "item": [
+        {
+          "name": "Assign Approved Activity to Student",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"assignedByTeacherId\":{{teacherId}},\"dueDate\":\"2027-01-15T10:00:00\"}" },
+            "url": "{{baseUrl}}/activities/{{activityId}}/assign/students/{{studentId}}"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('assignment succeeds', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+            "pm.test('has assignment id', () => pm.expect(json).to.have.property('id'));",
+            "if (json && json.id) pm.collectionVariables.set('assignmentId', json.id);"
+          ] } } ]
+        },
+        {
+          "name": "Get Assignments by Activity",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/activities/{{activityId}}/assignments" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('is an array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+          ] } } ]
+        },
+        {
+          "name": "Get Assignments by Student",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/students/{{studentId}}/activity-assignments" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('is an array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+          ] } } ]
+        },
+        {
+          "name": "Extend Deadline",
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"dueDate\":\"2027-03-15T10:00:00\"}" },
+            "url": "{{baseUrl}}/activity-assignments/{{assignmentId}}/extend-deadline"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('deadline extended', () => pm.response.to.have.status(200));"
+          ] } } ]
+        },
+        {
+          "name": "Bulk Assign (second student)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"assignedByTeacherId\":{{teacherId}},\"studentIds\":[{{student2Id}}],\"dueDate\":\"2027-01-20T10:00:00\"}" },
+            "url": "{{baseUrl}}/activities/{{activityId}}/assign/bulk-students"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('reports created/skipped/failed counts', () => pm.expect(json.message).to.include('Created'));"
+          ] } } ]
+        }
+      ]
+    },
+    {
+      "name": "6. Student Submission Flow",
+      "item": [
+        {
+          "name": "Start Assignment",
+          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/activity-assignments/{{assignmentId}}/start?studentId={{studentId}}" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+            "pm.test('submission is IN_PROGRESS', () => pm.expect(json.submissionStatus).to.eql('IN_PROGRESS'));",
+            "pm.test('has student-safe questions', () => pm.expect(json.questions).to.be.an('array').that.is.not.empty);",
+            "pm.test('has at least 3 questions', () => pm.expect(json.questions.length).to.be.at.least(3));",
+            "pm.test('each question has options', () => pm.expect(json.questions[0].options).to.be.an('array').that.is.not.empty);",
+            "pm.test('does NOT expose correctAnswer', () => { json.questions.forEach(q => pm.expect(q).to.not.have.property('correctAnswer')); });",
+            "pm.test('does NOT expose isCorrect', () => { json.questions.forEach(q => (q.options || []).forEach(o => pm.expect(o).to.not.have.property('isCorrect'))); });",
+            "pm.collectionVariables.set('submissionId', json.submissionId);",
+            "pm.collectionVariables.set('questionId1', json.questions[0].questionId);",
+            "pm.collectionVariables.set('optionId1', json.questions[0].options[0].optionId);",
+            "pm.collectionVariables.set('questionId2', json.questions[1].questionId);",
+            "pm.collectionVariables.set('optionId2', json.questions[1].options[0].optionId);",
+            "pm.collectionVariables.set('questionId3', json.questions[2].questionId);",
+            "pm.collectionVariables.set('optionId3', json.questions[2].options[0].optionId);"
+          ] } } ]
+        },
+        {
+          "name": "Get Current Submission",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/activity-submissions/{{submissionId}}/current" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));"
+          ] } } ]
+        },
+        {
+          "name": "Save One Answer (incomplete)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"answers\":[{\"questionId\":{{questionId1}},\"selectedOptionId\":{{optionId1}}}]}" },
+            "url": "{{baseUrl}}/activity-submissions/{{submissionId}}/answers/batch"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+            "pm.test('one answer saved', () => pm.expect(json).to.be.an('array').that.is.not.empty);",
+            "pm.test('saved answer status is SAVED (not SUBMITTED)', () => pm.expect(json[0].status).to.eql('SAVED'));"
+          ] } } ]
+        },
+        {
+          "name": "Submit Incomplete (expect 400)",
+          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/activity-submissions/{{submissionId}}/submit" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('incomplete submit fails with 400', () => pm.response.to.have.status(400));",
+            "pm.test('message asks to answer all questions', () => pm.expect(json.message).to.include('answer all questions'));",
+            "pm.test('message lists missing question ids', () => pm.expect(json.message).to.include('Missing question ids'));"
+          ] } } ]
+        },
+        {
+          "name": "Save All Answers (batch)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"answers\":[{\"questionId\":{{questionId1}},\"selectedOptionId\":{{optionId1}}},{\"questionId\":{{questionId2}},\"selectedOptionId\":{{optionId2}}},{\"questionId\":{{questionId3}},\"selectedOptionId\":{{optionId3}}}]}" },
+            "url": "{{baseUrl}}/activity-submissions/{{submissionId}}/answers/batch"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+            "pm.test('all three answers saved', () => pm.expect(json).to.be.an('array').with.lengthOf(3));",
+            "pm.test('all saved answers have status SAVED', () => json.forEach(a => pm.expect(a.status).to.eql('SAVED')));"
+          ] } } ]
+        },
+        {
+          "name": "Submit Activity (auto-evaluates)",
+          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/activity-submissions/{{submissionId}}/submit?language=en" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('submission auto-evaluated to GRADED', () => pm.expect(json.status).to.eql('GRADED'));",
+            "pm.test('score exists', () => pm.expect(json.score).to.not.be.null);",
+            "pm.test('activityMaxScore exists', () => pm.expect(json.activityMaxScore).to.not.be.null);",
+            "pm.test('aiFeedback exists', () => pm.expect(json.aiFeedback).to.be.a('string').and.not.empty);",
+            "pm.test('feedback shows score out of max', () => pm.expect(json.aiFeedback).to.include('/' + json.activityMaxScore));",
+            "pm.test('feedback uses total activity questions (3)', () => pm.expect(json.aiFeedback).to.include('Total questions: 3'));"
+          ] } } ]
+        },
+        {
+          "name": "Get Submission Result",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/activity-submissions/{{submissionId}}/result" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('result includes activityMaxScore', () => pm.expect(json).to.have.property('activityMaxScore'));"
+          ] } } ]
+        }
+      ]
+    },
+    {
+      "name": "7. AI Evaluation and Feedback (manual / optional - submit already auto-evaluates)",
+      "item": [
+        {
+          "name": "Evaluate Submission (EN) [manual re-grade - NOT required in normal flow]",
+          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/ai/activity-submissions/{{submissionId}}/evaluate?language=en" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('submission is GRADED', () => pm.expect(json.status).to.eql('GRADED'));",
+            "pm.test('score exists', () => pm.expect(json.score).to.not.be.null);",
+            "pm.test('activityMaxScore exists', () => pm.expect(json.activityMaxScore).to.not.be.null);",
+            "pm.test('aiFeedback exists', () => pm.expect(json.aiFeedback).to.be.a('string').and.not.empty);",
+            "pm.test('feedback shows score out of max', () => pm.expect(json.aiFeedback).to.include('/' + json.activityMaxScore));",
+            "pm.test('feedback uses total activity questions (3), not answered count', () => { pm.expect(json.aiFeedback).to.include('Total questions: 3'); pm.expect(json.aiFeedback).to.not.include('Total questions: 1'); });"
+          ] } } ]
+        },
+        {
+          "name": "Generate Feedback (AR, student) [manual - regenerates audience feedback, not required]",
+          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/ai/activity-submissions/{{submissionId}}/generate-feedback?language=ar&audience=student" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('aiFeedback returned', () => pm.expect(json.aiFeedback).to.be.a('string').and.not.empty);"
+          ] } } ]
+        },
+        {
+          "name": "Get Feedback",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/activity-submissions/{{submissionId}}/feedback" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('has aiFeedback field', () => pm.expect(json).to.have.property('aiFeedback'));",
+            "pm.test('has teacherFeedback field', () => pm.expect(json).to.have.property('teacherFeedback'));"
+          ] } } ]
+        },
+        {
+          "name": "Get Student Activity Results",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/students/{{studentId}}/activity-results" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('is an array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+          ] } } ]
+        },
+        {
+          "name": "Get Teacher Pending Grading",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/teachers/{{teacherId}}/activity-submissions/pending-grading" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('is an array (may be empty after AI grading)', () => pm.expect(pm.response.json()).to.be.an('array'));"
+          ] } } ]
+        }
+      ]
+    },
+    {
+      "name": "8. Teacher Feedback / Return / Reopen Flow",
+      "item": [
+        {
+          "name": "Add Teacher Feedback (no status change)",
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"teacherId\":{{teacherId}},\"teacherFeedback\":\"Great work. Your solution is correct, but remember to show the formula next time.\"}" },
+            "url": "{{baseUrl}}/activity-submissions/{{submissionId}}/teacher-feedback"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('teacherFeedback stored', () => pm.expect(json.teacherFeedback).to.include('show the formula'));",
+            "pm.test('submission status unchanged (still GRADED)', () => pm.expect(json.status).to.eql('GRADED'));"
+          ] } } ]
+        },
+        {
+          "name": "Return to Student",
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"teacherId\":{{teacherId}},\"teacherFeedback\":\"Please review the formula and try again\"}" },
+            "url": "{{baseUrl}}/activity-submissions/{{submissionId}}/return-to-student"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('return succeeds', () => pm.response.to.have.status(200));"
+          ] } } ]
+        },
+        {
+          "name": "Reopen Submission (enables resubmit)",
+          "request": { "method": "PATCH", "header": [], "url": "{{baseUrl}}/activity-submissions/{{submissionId}}/reopen" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('reopened to IN_PROGRESS', () => pm.expect(json.submissionStatus).to.eql('IN_PROGRESS'));",
+            "pm.test('has student-safe questions', () => pm.expect(json.questions).to.be.an('array').that.is.not.empty);",
+            "pm.test('reopen does NOT expose correctAnswer', () => json.questions.forEach(q => pm.expect(q).to.not.have.property('correctAnswer')));",
+            "pm.test('reopen does NOT expose isCorrect', () => json.questions.forEach(q => (q.options||[]).forEach(o => pm.expect(o).to.not.have.property('isCorrect'))));",
+            "pm.collectionVariables.set('questionId1', json.questions[0].questionId);",
+            "pm.collectionVariables.set('optionId1', json.questions[0].options[0].optionId);",
+            "pm.collectionVariables.set('questionId2', json.questions[1].questionId);",
+            "pm.collectionVariables.set('optionId2', json.questions[1].options[0].optionId);",
+            "pm.collectionVariables.set('questionId3', json.questions[2].questionId);",
+            "pm.collectionVariables.set('optionId3', json.questions[2].options[0].optionId);"
+          ] } } ]
+        },
+        {
+          "name": "Verify Reopen Cleared Score/Feedback",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/activity-submissions/{{submissionId}}/result" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('status IN_PROGRESS', () => pm.expect(json.status).to.eql('IN_PROGRESS'));",
+            "pm.test('score cleared to null', () => pm.expect(json.score).to.be.null);",
+            "pm.test('aiFeedback cleared to null', () => pm.expect(json.aiFeedback).to.be.null);",
+            "pm.test('teacherFeedback kept', () => pm.expect(json.teacherFeedback).to.be.a('string').and.not.empty);"
+          ] } } ]
+        },
+        {
+          "name": "Resave Answers After Reopen",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"answers\":[{\"questionId\":{{questionId1}},\"selectedOptionId\":{{optionId1}}},{\"questionId\":{{questionId2}},\"selectedOptionId\":{{optionId2}}},{\"questionId\":{{questionId3}},\"selectedOptionId\":{{optionId3}}}]}" },
+            "url": "{{baseUrl}}/activity-submissions/{{submissionId}}/answers/batch"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+            "pm.test('answers saved again as SAVED', () => json.forEach(a => pm.expect(a.status).to.eql('SAVED')));"
+          ] } } ]
+        },
+        {
+          "name": "Resubmit After Reopen (auto-evaluates)",
+          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/activity-submissions/{{submissionId}}/submit?language=en" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('resubmission auto-evaluated to GRADED', () => pm.expect(json.status).to.eql('GRADED'));",
+            "pm.test('score exists again', () => pm.expect(json.score).to.not.be.null);"
+          ] } } ]
+        }
+      ]
+    },
+    {
+      "name": "9. Extra Missing Endpoint Checks",
+      "item": [
+        {
+          "name": "Available Career Worlds",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/students/{{studentId}}/career-worlds/available" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('returns career worlds', () => pm.expect(pm.response.json()).to.be.an('array'));"
+          ] } } ]
+        },
+        {
+          "name": "Skill History",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/students/{{studentId}}/skills/history" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('returns a non-empty list', () => pm.expect(json).to.be.an('array').that.is.not.empty);",
+            "pm.test('an automatic row exists with server-assigned changedAt', () => { const auto = json.find(r => (r.reason || '').indexOf('automatically') !== -1); pm.expect(auto, 'auto skill-progress row').to.not.be.undefined; pm.expect(auto.changedAt).to.be.a('string').and.not.empty; });"
+          ] } } ]
+        },
+        {
+          "name": "Learning Style History",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/students/{{studentId}}/learning-style/history" },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "const json = pm.response.json();",
+            "pm.test('status 200', () => pm.response.to.have.status(200));",
+            "pm.test('returns a non-empty list', () => pm.expect(json).to.be.an('array').that.is.not.empty);",
+            "pm.test('an automatic row exists with server-assigned changedAt', () => { const auto = json.find(r => (r.reason || '').indexOf('automatically') !== -1); pm.expect(auto, 'auto learning-style row').to.not.be.undefined; pm.expect(auto.changedAt).to.be.a('string').and.not.empty; });"
+          ] } } ]
+        },
+        {
+          "name": "Invalid language fails (AI generate)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\"topic\":\"Invalid Language Check\",\"type\":\"QUIZ\",\"difficulty\":\"EASY\",\"questionCount\":1,\"maxScore\":5}" },
+            "url": "{{baseUrl}}/ai/activities/generate?language=fr"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('invalid language fails with 400', () => pm.response.to.have.status(400));"
+          ] } } ]
+        }
+      ]
+    }
+  ]
+}

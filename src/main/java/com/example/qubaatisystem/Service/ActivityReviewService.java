@@ -40,10 +40,15 @@ public class ActivityReviewService {
     }
 
     public void create(ActivityReviewInDTO dto) {
-        ActivityReview activityReview = modelMapper.map(dto, ActivityReview.class);
+        // Map scalar fields manually; relation ids ("...Id") are resolved in applyRelationships.
+        ActivityReview activityReview = new ActivityReview();
+        activityReview.setDecision(dto.getDecision());
+        activityReview.setReviewComment(dto.getReviewComment());
+        activityReview.setReviewedAt(dto.getReviewedAt());
 
         applyRelationships(activityReview, dto);
 
+        activityReview.setId(null);
         activityReviewRepository.save(activityReview);
     }
 
@@ -53,11 +58,11 @@ public class ActivityReviewService {
             throw new ApiException("ActivityReview with id " + id + " not found");
         }
 
-        // Clear relationships first so ModelMapper only copies scalar fields
-        // (never mutates the ids of the currently-managed related entities).
-        activityReview.setActivity(null);
-        activityReview.setTeacher(null);
-        modelMapper.map(dto, activityReview);
+        // Map scalar fields manually; relation ids ("...Id") are resolved in applyRelationships.
+        activityReview.setDecision(dto.getDecision());
+        activityReview.setReviewComment(dto.getReviewComment());
+        activityReview.setReviewedAt(dto.getReviewedAt());
+        activityReview.setId(id);
 
         applyRelationships(activityReview, dto);
 

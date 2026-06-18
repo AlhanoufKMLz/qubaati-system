@@ -40,10 +40,15 @@ public class StudentSkillService {
     }
 
     public void create(StudentSkillInDTO dto) {
-        StudentSkill studentSkill = modelMapper.map(dto, StudentSkill.class);
+        // Manual scalar mapping: the InDTO holds multiple relation-id fields
+        // (studentId, skillId) which ModelMapper would ambiguously match to setId().
+        StudentSkill studentSkill = new StudentSkill();
+        studentSkill.setScore(dto.getScore());
+        studentSkill.setLevel(dto.getLevel());
 
         applyRelationships(studentSkill, dto);
 
+        studentSkill.setId(null);
         studentSkillRepository.save(studentSkill);
     }
 
@@ -53,11 +58,11 @@ public class StudentSkillService {
             throw new ApiException("StudentSkill with id " + id + " not found");
         }
 
-        // Clear relationships first so ModelMapper only copies scalar fields
-        // (never mutates the ids of the currently-managed related entities).
-        studentSkill.setStudent(null);
-        studentSkill.setSkill(null);
-        modelMapper.map(dto, studentSkill);
+        // Manual scalar mapping (ModelMapper would ambiguously match the relation-id
+        // fields to setId()); relations are re-resolved by applyRelationships below.
+        studentSkill.setScore(dto.getScore());
+        studentSkill.setLevel(dto.getLevel());
+        studentSkill.setId(id);
 
         applyRelationships(studentSkill, dto);
 
