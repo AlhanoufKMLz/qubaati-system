@@ -47,4 +47,9 @@ public class TeacherController {
         teacherService.delete(id);
         return ResponseEntity.status(200).body(new ApiResponse("Teacher deleted successfully"));
     }
+
+    @GetMapping("/{teacherId}/dashboard")
+    public ResponseEntity<?> getDashboard(@PathVariable Integer teacherId) {
+        return ResponseEntity.status(200).body(teacherService.getDashboard(teacherId));
+    }
 }

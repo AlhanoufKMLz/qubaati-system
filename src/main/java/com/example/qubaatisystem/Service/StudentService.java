@@ -1,6 +1,7 @@
 package com.example.qubaatisystem.Service;
 
 import com.example.qubaatisystem.Api.ApiException;
+import com.example.qubaatisystem.DTO.In.ChildUpdateProfileInDTO;
 import com.example.qubaatisystem.DTO.In.StudentInDTO;
 import com.example.qubaatisystem.DTO.Out.CareerWorldOutDTO;
 import com.example.qubaatisystem.DTO.Out.LearningStyleHistoryOutDTO;
@@ -45,6 +46,64 @@ public class StudentService {
                 .stream()
                 .map(this::mapStudentToOutDTO)
                 .toList();
+    }
+
+    public List<StudentOutDTO> getByParentId(Integer parentId) {
+        return studentRepository.findByParentId(parentId)
+                .stream()
+                .map(this::mapStudentToOutDTO)
+                .toList();
+    }
+
+    public List<StudentOutDTO> getByClassroomId(Integer classroomId) {
+        return studentRepository.findByClassroomId(classroomId)
+                .stream()
+                .map(this::mapStudentToOutDTO)
+                .toList();
+    }
+
+    public int getStudentCountByTeacherId(Integer teacherId) {
+        return studentRepository.countByClassroomTeacherId(teacherId);
+    }
+
+    @Transactional
+    public void enrollInClassroom(Integer studentId, Integer classroomId) {
+        Student student = studentRepository.findStudentById(studentId);
+        if (student == null) {
+            throw new ApiException("Student with id " + studentId + " not found");
+        }
+        Classroom classroom = classroomRepository.findClassroomById(classroomId);
+        if (classroom == null) {
+            throw new ApiException("Classroom with id " + classroomId + " not found");
+        }
+        student.setClassroom(classroom);
+        studentRepository.save(student);
+    }
+
+    @Transactional
+    public void removeFromClassroom(Integer studentId, Integer classroomId) {
+        Student student = studentRepository.findStudentById(studentId);
+        if (student == null) {
+            throw new ApiException("Student with id " + studentId + " not found");
+        }
+        if (student.getClassroom() == null || !classroomId.equals(student.getClassroom().getId())) {
+            throw new ApiException("Student with id " + studentId + " is not enrolled in classroom with id " + classroomId);
+        }
+        student.setClassroom(null);
+        studentRepository.save(student);
+    }
+
+    @Transactional
+    public StudentOutDTO updateProfile(Integer studentId, ChildUpdateProfileInDTO dto) {
+        Student student = studentRepository.findStudentById(studentId);
+        if (student == null) {
+            throw new ApiException("Student with id " + studentId + " not found");
+        }
+        student.setFullName(dto.getFullName());
+        student.setAge(dto.getAge());
+        student.setGrade(dto.getGrade());
+        studentRepository.save(student);
+        return mapStudentToOutDTO(student);
     }
 
     public StudentOutDTO getById(Integer id) {

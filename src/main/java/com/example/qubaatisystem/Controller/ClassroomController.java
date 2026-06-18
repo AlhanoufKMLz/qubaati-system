@@ -49,4 +49,33 @@ public class ClassroomController {
         classroomService.delete(id);
         return ResponseEntity.status(200).body(new ApiResponse("Classroom deleted successfully"));
     }
+
+    @PostMapping("/{classroomId}/students/{studentId}/enroll")
+    public ResponseEntity<?> enrollStudent(@PathVariable Integer classroomId,
+                                           @PathVariable Integer studentId) {
+        classroomService.enrollStudent(classroomId, studentId);
+        return ResponseEntity.status(200).body(new ApiResponse("Student enrolled in classroom successfully"));
+    }
+
+    @DeleteMapping("/{classroomId}/students/{studentId}/remove")
+    public ResponseEntity<?> removeStudent(@PathVariable Integer classroomId,
+                                           @PathVariable Integer studentId) {
+        classroomService.removeStudent(classroomId, studentId);
+        return ResponseEntity.status(200).body(new ApiResponse("Student removed from classroom successfully"));
+    }
+
+    @GetMapping("/{classroomId}/students")
+    public ResponseEntity<?> getStudents(@PathVariable Integer classroomId) {
+        return ResponseEntity.status(200).body(classroomService.getStudents(classroomId));
+    }
+
+    @GetMapping("/{classroomId}/dashboard")
+    public ResponseEntity<?> getDashboard(@PathVariable Integer classroomId) {
+        return ResponseEntity.status(200).body(classroomService.getDashboard(classroomId));
+    }
+
+    @GetMapping("/{classroomId}/progress")
+    public ResponseEntity<?> getProgress(@PathVariable Integer classroomId) {
+        return ResponseEntity.status(200).body(classroomService.getProgress(classroomId));
+    }
 }
