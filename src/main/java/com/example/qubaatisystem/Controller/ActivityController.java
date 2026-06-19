@@ -5,7 +5,7 @@ import com.example.qubaatisystem.DTO.In.ActivityInDTO;
 import com.example.qubaatisystem.DTO.In.ActivityReviewActionInDTO;
 import com.example.qubaatisystem.DTO.Out.ActivityDetailsOutDTO;
 import com.example.qubaatisystem.Service.ActivityService;
-import com.example.qubaatisystem.Service.AiService;
+import com.example.qubaatisystem.Service.AiActivityService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ActivityController {
 
     private final ActivityService activityService;
-    private final AiService aiService;
+    private final AiActivityService AiActivityService;
 
     // ---------- CRUD ----------
 
@@ -102,6 +102,6 @@ public class ActivityController {
     public ResponseEntity<ActivityDetailsOutDTO> getActivityDetails(
             @PathVariable Integer activityId,
             @RequestParam(defaultValue = "en") String language) {
-        return ResponseEntity.status(200).body(aiService.getActivityDetails(activityId, language));
+        return ResponseEntity.status(200).body(AiActivityService.getActivityDetails(activityId, language));
     }
 }

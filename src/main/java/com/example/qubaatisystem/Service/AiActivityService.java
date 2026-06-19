@@ -45,7 +45,7 @@ import java.util.regex.Pattern;
  */
 @Service
 @RequiredArgsConstructor
-public class AiService {
+public class AiActivityService {
 
     private final ActivityRepository activityRepository;
     private final QuestionRepository questionRepository;
