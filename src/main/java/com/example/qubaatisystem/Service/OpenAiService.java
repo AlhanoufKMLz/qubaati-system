@@ -3,91 +3,47 @@ package com.example.qubaatisystem.Service;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import tools.jackson.databind.ObjectMapper;
 
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
- * Thin wrapper around the OpenAI Chat Completions API.
- * Returns null on any error so the caller can fall back to rule-based analysis.
- * The API key is never logged, returned in a response, or stored outside this class.
+ * Thin wrapper around OpenAI via Spring AI {@link ChatClient} (migrated from the old manual RestTemplate
+ * integration). Returns {@code null} on any error — no/invalid key, network failure, or malformed JSON — so
+ * the caller falls back to rule-based analysis. The API key and model come from Spring AI configuration
+ * ({@code spring.ai.openai.*}); they are never read, logged, returned, or stored in this class.
  */
 @Slf4j
 @Service
 public class OpenAiService {
 
-    private static final String API_URL = "https://api.openai.com/v1/chat/completions";
-
-    @Value("${openai.api-key:}")
-    private String apiKey;
-
-    @Value("${openai.model:gpt-4o-mini}")
-    private String model;
-
-    private final RestTemplate restTemplate;
+    private final ChatClient chatClient;
     private final ObjectMapper objectMapper;
 
-    public OpenAiService(ObjectMapper objectMapper) {
-        this.restTemplate = new RestTemplate();
+    public OpenAiService(ChatClient.Builder chatClientBuilder, ObjectMapper objectMapper) {
+        this.chatClient = chatClientBuilder.build();
         this.objectMapper = objectMapper;
     }
 
-    /** Returns true only when a non-blank API key is configured. */
-    public boolean isConfigured() {
-        return apiKey != null && !apiKey.isBlank();
-    }
-
     /**
-     * Sends a chat request to OpenAI and returns the parsed result.
-     * Returns null if the key is missing, the API call fails, or the JSON is malformed.
+     * Sends a chat request to OpenAI via Spring AI and parses the model's JSON content into
+     * {@link AiAnalysisResult}. Returns {@code null} if the call fails (e.g. no API key configured), the
+     * response is blank, or the JSON is malformed — so callers can apply their deterministic fallback.
      */
-    @SuppressWarnings("unchecked")
     public AiAnalysisResult analyze(String systemPrompt, String userPrompt) {
-        if (!isConfigured()) return null;
-
         try {
-            // Build request body
-            Map<String, Object> requestBody = new LinkedHashMap<>();
-            requestBody.put("model", model);
-            requestBody.put("messages", List.of(
-                    Map.of("role", "system", "content", systemPrompt),
-                    Map.of("role", "user",   "content", userPrompt)
-            ));
-            requestBody.put("temperature", 0.3);
-            requestBody.put("max_tokens", 800);
-            requestBody.put("response_format", Map.of("type", "json_object"));
-
-            String requestJson = objectMapper.writeValueAsString(requestBody);
-
-            // HTTP call — body sent and received as plain String to avoid converter issues
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + apiKey);
-
-            ResponseEntity<String> response = restTemplate.exchange(
-                    API_URL, HttpMethod.POST,
-                    new HttpEntity<>(requestJson, headers),
-                    String.class
-            );
-
-            // Parse outer response → extract content string
-            Map<String, Object> body = objectMapper.readValue(response.getBody(), Map.class);
-            List<Map<String, Object>> choices = (List<Map<String, Object>>) body.get("choices");
-            String content = (String) ((Map<String, Object>) choices.get(0).get("message")).get("content");
-
-            // Parse the JSON content the model produced
+            String content = chatClient
+                    .prompt()
+                    .system(systemPrompt)
+                    .user(userPrompt)
+                    .call()
+                    .content();
+            if (content == null || content.isBlank()) {
+                return null;
+            }
             return objectMapper.readValue(content, AiAnalysisResult.class);
-
         } catch (Exception e) {
             log.warn("OpenAI call failed — using rule-based fallback: {}", e.getMessage());
             return null;

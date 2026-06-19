@@ -41,11 +41,6 @@ public class AiController {
         return ResponseEntity.status(200).body(aiActivityService.refineActivity(activityId, instruction, language));
     }
 
-    @PostMapping("/classrooms/{classroomId}/summary")
-    public ResponseEntity<?> getClassroomSummary(@PathVariable Integer classroomId) {
-        return ResponseEntity.status(200).body(aiAnalysisService.analyzeClassroom(classroomId));
-    }
-
     @PostMapping("/activity-submissions/{submissionId}/evaluate")
     public ResponseEntity<ActivitySubmissionOutDTO> evaluateSubmission(
             @PathVariable Integer submissionId,
@@ -53,18 +48,20 @@ public class AiController {
         return ResponseEntity.status(200).body(aiActivityService.evaluateSubmission(submissionId, language));
     }
 
+    @PostMapping("/activity-submissions/{submissionId}/generate-feedback")
+    public ResponseEntity<ActivitySubmissionOutDTO> generateFeedback(@PathVariable Integer submissionId, @RequestParam(defaultValue = "student") String audience, @RequestParam(defaultValue = "en") String language) {
+        return ResponseEntity.status(200).body(aiActivityService.generateFeedback(submissionId, audience, language));
+    }
+
+    @PostMapping("/classrooms/{classroomId}/summary")
+    public ResponseEntity<?> getClassroomSummary(@PathVariable Integer classroomId) {
+        return ResponseEntity.status(200).body(aiAnalysisService.analyzeClassroom(classroomId));
+    }
+
     @PostMapping("/parents/{parentId}/children/{studentId}/summary")
     public ResponseEntity<?> getStudentSummary(@PathVariable Integer parentId,
                                                @PathVariable Integer studentId) {
         return ResponseEntity.status(200).body(aiAnalysisService.analyzeStudent(parentId, studentId));
-    }
-
-    @PostMapping("/activity-submissions/{submissionId}/generate-feedback")
-    public ResponseEntity<ActivitySubmissionOutDTO> generateFeedback(
-            @PathVariable Integer submissionId,
-            @RequestParam(defaultValue = "student") String audience,
-            @RequestParam(defaultValue = "en") String language) {
-        return ResponseEntity.status(200).body(aiActivityService.generateFeedback(submissionId, audience, language));
     }
 
     @PostMapping("/parents/{parentId}/dashboard-insight")
