@@ -843,7 +843,7 @@
             "url": "{{baseUrl}}/activities",
             "body": {
               "mode": "raw",
-              "raw": "{\"title\":\"Teacher Owned Seed Activity\",\"description\":\"Owned by the teacher (Student 1 ownership seed).\",\"type\":\"QUIZ\",\"status\":\"PENDING_REVIEW\",\"difficulty\":\"EASY\",\"maxScore\":10,\"teacherId\":{{teacherId}},\"skillId\":{{skillId}}}"
+              "raw": "{\"title\":\"Teacher Owned Seed Activity\",\"description\":\"Owned by the teacher (Student 1 ownership seed).\",\"type\":\"QUIZ\",\"status\":\"PENDING_REVIEW\",\"difficulty\":\"EASY\",\"maxScore\":10,\"skillId\":{{skillId}}}"
             },
             "auth": {
               "type": "basic",
@@ -924,7 +924,7 @@
             "url": "{{baseUrl}}/activities/{{teacherOwnedActivityId}}/approve",
             "body": {
               "mode": "raw",
-              "raw": "{\"teacherId\":{{teacherId}},\"reviewComment\":\"Seed approval\"}"
+              "raw": "{\"reviewComment\":\"Seed approval\"}"
             },
             "auth": {
               "type": "basic",
@@ -1268,9 +1268,9 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"assignedByTeacherId\":{{teacherId}},\"dueDate\":\"2027-01-15T10:00:00\"}"
+              "raw": "{\"dueDate\":\"2027-01-15T10:00:00\"}"
             },
-            "url": "{{baseUrl}}/activities/{{activityId}}/assign/students/{{studentId}}",
+            "url": "{{baseUrl}}/activities/{{activityId}}/assign/students/me",
             "auth": {
               "type": "basic",
               "basic": [
@@ -1346,7 +1346,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"teacherId\":{{teacherId}},\"reviewComment\":\"Approved for Grade 6 physics practice\"}"
+              "raw": "{\"reviewComment\":\"Approved for Grade 6 physics practice\"}"
             },
             "url": "{{baseUrl}}/activities/{{activityId}}/approve",
             "auth": {
@@ -1515,7 +1515,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"teacherId\":{{teacherId}},\"reviewComment\":\"Please simplify the wording and add clearer options\"}"
+              "raw": "{\"reviewComment\":\"Please simplify the wording and add clearer options\"}"
             },
             "url": "{{baseUrl}}/activities/{{revisionActivityId}}/request-revision",
             "auth": {
@@ -1641,7 +1641,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"teacherId\":{{teacherId}},\"reviewComment\":\"The activity does not match the learning objective\"}"
+              "raw": "{\"reviewComment\":\"The activity does not match the learning objective\"}"
             },
             "url": "{{baseUrl}}/activities/{{thirdActivityId}}/reject",
             "auth": {
@@ -1723,9 +1723,9 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"assignedByTeacherId\":{{teacherId}},\"dueDate\":\"2027-01-15T10:00:00\"}"
+              "raw": "{\"dueDate\":\"2027-01-15T10:00:00\"}"
             },
-            "url": "{{baseUrl}}/activities/{{activityId}}/assign/students/{{studentId}}",
+            "url": "{{baseUrl}}/activities/{{activityId}}/assign/students/me",
             "auth": {
               "type": "basic",
               "basic": [
@@ -1795,18 +1795,18 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/students/{{studentId}}/activity-assignments",
+            "url": "{{baseUrl}}/students/me/activity-assignments",
             "auth": {
               "type": "basic",
               "basic": [
                 {
                   "key": "username",
-                  "value": "{{teacherUsername}}",
+                  "value": "{{studentUsername}}",
                   "type": "string"
                 },
                 {
                   "key": "password",
-                  "value": "{{teacherPassword}}",
+                  "value": "{{studentPassword}}",
                   "type": "string"
                 }
               ]
@@ -1878,7 +1878,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"assignedByTeacherId\":{{teacherId}},\"studentIds\":[{{student2Id}}],\"dueDate\":\"2027-01-20T10:00:00\"}"
+              "raw": "{\"studentIds\":[{{student2Id}}],\"dueDate\":\"2027-01-20T10:00:00\"}"
             },
             "url": "{{baseUrl}}/activities/{{activityId}}/assign/bulk-students",
             "auth": {
@@ -2317,7 +2317,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/students/{{studentId}}/activity-results",
+            "url": "{{baseUrl}}/students/me/activity-results",
             "auth": {
               "type": "basic",
               "basic": [
@@ -2351,7 +2351,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/teachers/{{teacherId}}/activity-submissions/pending-grading",
+            "url": "{{baseUrl}}/teachers/me/activity-submissions/pending-grading",
             "auth": {
               "type": "basic",
               "basic": [
@@ -2397,7 +2397,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"teacherId\":{{teacherId}},\"teacherFeedback\":\"Great work. Your solution is correct, but remember to show the formula next time.\"}"
+              "raw": "{\"teacherFeedback\":\"Great work. Your solution is correct, but remember to show the formula next time.\"}"
             },
             "url": "{{baseUrl}}/activity-submissions/{{submissionId}}/teacher-feedback",
             "auth": {
@@ -2442,7 +2442,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"teacherId\":{{teacherId}},\"teacherFeedback\":\"Please review the formula and try again\"}"
+              "raw": "{\"teacherFeedback\":\"Please review the formula and try again\"}"
             },
             "url": "{{baseUrl}}/activity-submissions/{{submissionId}}/return-to-student",
             "auth": {
@@ -2733,7 +2733,7 @@
             "url": "{{baseUrl}}/activities/{{s2ActivityId}}/approve",
             "body": {
               "mode": "raw",
-              "raw": "{\"teacherId\":{{teacherId}},\"reviewComment\":\"Approved for assignment\"}"
+              "raw": "{\"reviewComment\":\"Approved for assignment\"}"
             },
             "auth": {
               "type": "basic",
@@ -2816,9 +2816,9 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"assignedByTeacherId\":{{teacherId}}}"
+              "raw": "{}"
             },
-            "url": "{{baseUrl}}/activities/{{s2ActivityId}}/assign/students/{{studentId}}",
+            "url": "{{baseUrl}}/activities/{{s2ActivityId}}/assign/students/me",
             "auth": {
               "type": "basic",
               "basic": [
@@ -2896,7 +2896,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"assignedByTeacherId\":{{teacherId}}}"
+              "raw": "{}"
             },
             "url": "{{baseUrl}}/activities/{{s2ActivityId}}/assign/classrooms/{{classroomId}}",
             "auth": {
@@ -3015,7 +3015,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/students/{{studentId}}",
+            "url": "{{baseUrl}}/students/me",
             "auth": {
               "type": "basic",
               "basic": [
@@ -3128,7 +3128,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"teacherId\":{{teacherId}},\"earnedPoints\":7,\"status\":\"PARTIAL\",\"feedback\":\"Good idea, but mention Rayleigh scattering.\"}"
+              "raw": "{\"earnedPoints\":7,\"status\":\"PARTIAL\",\"feedback\":\"Good idea, but mention Rayleigh scattering.\"}"
             },
             "url": "{{baseUrl}}/student-answers/{{s2AnswerId}}/grade",
             "auth": {
@@ -3165,7 +3165,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/students/{{studentId}}",
+            "url": "{{baseUrl}}/students/me",
             "auth": {
               "type": "basic",
               "basic": [
@@ -3200,18 +3200,18 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/students/{{studentId}}/skills",
+            "url": "{{baseUrl}}/students/me/skills",
             "auth": {
               "type": "basic",
               "basic": [
                 {
                   "key": "username",
-                  "value": "{{adminUsername}}",
+                  "value": "{{studentUsername}}",
                   "type": "string"
                 },
                 {
                   "key": "password",
-                  "value": "{{adminPassword}}",
+                  "value": "{{studentPassword}}",
                   "type": "string"
                 }
               ]
@@ -3347,7 +3347,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"teacherId\":{{teacherId}},\"teacherFeedback\":\"Please add the term Rayleigh scattering.\"}"
+              "raw": "{\"teacherFeedback\":\"Please add the term Rayleigh scattering.\"}"
             },
             "url": "{{baseUrl}}/activity-submissions/{{s2SubmissionId}}/teacher-feedback",
             "auth": {
@@ -3425,7 +3425,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"teacherId\":{{teacherId}},\"teacherFeedback\":\"Revise your answer and resubmit.\"}"
+              "raw": "{\"teacherFeedback\":\"Revise your answer and resubmit.\"}"
             },
             "url": "{{baseUrl}}/activity-submissions/{{s2SubmissionId}}/return-to-student",
             "auth": {
@@ -3502,7 +3502,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"teacherId\":{{teacherId}},\"earnedPoints\":5,\"status\":\"PARTIAL\",\"feedback\":\"should be rejected\"}"
+              "raw": "{\"earnedPoints\":5,\"status\":\"PARTIAL\",\"feedback\":\"should be rejected\"}"
             },
             "url": "{{baseUrl}}/student-answers/{{s2AnswerId}}/grade",
             "auth": {
@@ -3537,7 +3537,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/students/{{studentId}}",
+            "url": "{{baseUrl}}/students/me",
             "auth": {
               "type": "basic",
               "basic": [
@@ -3667,7 +3667,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"status\":\"ASSIGNED\",\"activityId\":{{s2ActivityId}},\"studentId\":{{studentId}},\"assignedByTeacherId\":{{teacherId}},\"dueDate\":\"{{overdueDate}}\"}"
+              "raw": "{\"status\":\"ASSIGNED\",\"activityId\":{{s2ActivityId}},\"studentId\":{{studentId}},\"dueDate\":\"{{overdueDate}}\"}"
             },
             "url": "{{baseUrl}}/activity-assignments",
             "auth": {
@@ -3787,7 +3787,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"status\":\"ASSIGNED\",\"activityId\":{{s2ActivityId}},\"studentId\":{{studentId}},\"assignedByTeacherId\":{{teacherId}},\"dueDate\":\"{{dueSoonDate}}\"}"
+              "raw": "{\"status\":\"ASSIGNED\",\"activityId\":{{s2ActivityId}},\"studentId\":{{studentId}},\"dueDate\":\"{{dueSoonDate}}\"}"
             },
             "url": "{{baseUrl}}/activity-assignments",
             "auth": {
@@ -3882,7 +3882,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/students/{{studentId}}/activity-dashboard",
+            "url": "{{baseUrl}}/students/me/activity-dashboard",
             "auth": {
               "type": "basic",
               "basic": [
@@ -4348,7 +4348,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/students/{{studentId}}/missions/available?careerWorldId={{careerWorldId}}",
+            "url": "{{baseUrl}}/students/me/missions/available?careerWorldId={{careerWorldId}}",
             "auth": {
               "type": "basic",
               "basic": [
@@ -4460,7 +4460,7 @@
           "request": {
             "method": "POST",
             "header": [],
-            "url": "{{baseUrl}}/missions/{{mission1Id}}/sessions/start?studentId={{studentId}}",
+            "url": "{{baseUrl}}/missions/{{mission1Id}}/sessions/start",
             "auth": {
               "type": "basic",
               "basic": [
@@ -4701,7 +4701,7 @@
           "request": {
             "method": "POST",
             "header": [],
-            "url": "{{baseUrl}}/missions/{{mission2Id}}/sessions/start?studentId={{studentId}}",
+            "url": "{{baseUrl}}/missions/{{mission2Id}}/sessions/start",
             "auth": {
               "type": "basic",
               "basic": [
@@ -4858,7 +4858,7 @@
           "request": {
             "method": "POST",
             "header": [],
-            "url": "{{baseUrl}}/missions/{{mission3Id}}/sessions/start?studentId={{studentId}}",
+            "url": "{{baseUrl}}/missions/{{mission3Id}}/sessions/start",
             "auth": {
               "type": "basic",
               "basic": [
@@ -5015,7 +5015,7 @@
           "request": {
             "method": "POST",
             "header": [],
-            "url": "{{baseUrl}}/missions/{{mission4Id}}/sessions/start?studentId={{studentId}}",
+            "url": "{{baseUrl}}/missions/{{mission4Id}}/sessions/start",
             "auth": {
               "type": "basic",
               "basic": [
@@ -5174,7 +5174,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/students/{{studentId}}/missions/available?careerWorldId={{careerWorldId}}",
+            "url": "{{baseUrl}}/students/me/missions/available?careerWorldId={{careerWorldId}}",
             "auth": {
               "type": "basic",
               "basic": [
@@ -5287,7 +5287,7 @@
           "request": {
             "method": "POST",
             "header": [],
-            "url": "{{baseUrl}}/missions/{{generatedMissionId}}/sessions/start?studentId={{studentId}}",
+            "url": "{{baseUrl}}/missions/{{generatedMissionId}}/sessions/start",
             "auth": {
               "type": "basic",
               "basic": [
@@ -5457,7 +5457,7 @@
               "mode": "raw",
               "raw": "{\"reason\":\"Please make it a bit easier.\"}"
             },
-            "url": "{{baseUrl}}/students/{{studentId}}/missions/{{generatedMissionId2}}/regenerate",
+            "url": "{{baseUrl}}/students/me/missions/{{generatedMissionId2}}/regenerate",
             "auth": {
               "type": "basic",
               "basic": [
@@ -5563,7 +5563,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/students/{{studentId}}/recommendations",
+            "url": "{{baseUrl}}/students/me/recommendations",
             "auth": {
               "type": "basic",
               "basic": [
@@ -5598,7 +5598,7 @@
           "request": {
             "method": "POST",
             "header": [],
-            "url": "{{baseUrl}}/students/{{studentId}}/recommendations/regenerate",
+            "url": "{{baseUrl}}/students/me/recommendations/regenerate",
             "auth": {
               "type": "basic",
               "basic": [
@@ -5667,18 +5667,18 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/students/{{studentId}}/skills",
+            "url": "{{baseUrl}}/students/me/skills",
             "auth": {
               "type": "basic",
               "basic": [
                 {
                   "key": "username",
-                  "value": "{{adminUsername}}",
+                  "value": "{{studentUsername}}",
                   "type": "string"
                 },
                 {
                   "key": "password",
-                  "value": "{{adminPassword}}",
+                  "value": "{{studentPassword}}",
                   "type": "string"
                 }
               ]
@@ -5701,7 +5701,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/students/{{studentId}}",
+            "url": "{{baseUrl}}/students/me",
             "auth": {
               "type": "basic",
               "basic": [
@@ -6228,7 +6228,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/students/{{studentId}}/career-worlds/available",
+            "url": "{{baseUrl}}/students/me/career-worlds/available",
             "auth": {
               "type": "basic",
               "basic": [
@@ -6262,18 +6262,18 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/students/{{studentId}}/skills/history",
+            "url": "{{baseUrl}}/students/me/skills/history",
             "auth": {
               "type": "basic",
               "basic": [
                 {
                   "key": "username",
-                  "value": "{{adminUsername}}",
+                  "value": "{{studentUsername}}",
                   "type": "string"
                 },
                 {
                   "key": "password",
-                  "value": "{{adminPassword}}",
+                  "value": "{{studentPassword}}",
                   "type": "string"
                 }
               ]
@@ -6298,7 +6298,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/students/{{studentId}}/learning-style/history",
+            "url": "{{baseUrl}}/students/me/learning-style/history",
             "auth": {
               "type": "basic",
               "basic": [
@@ -6547,7 +6547,7 @@
             "url": "{{baseUrl}}/activities",
             "body": {
               "mode": "raw",
-              "raw": "{\"title\":\"Guard Status Check {{runSuffix}}\",\"type\":\"QUIZ\",\"status\":\"APPROVED\",\"difficulty\":\"EASY\",\"maxScore\":5,\"teacherId\":{{teacherId}},\"skillId\":{{skillId}}}"
+              "raw": "{\"title\":\"Guard Status Check {{runSuffix}}\",\"type\":\"QUIZ\",\"status\":\"APPROVED\",\"difficulty\":\"EASY\",\"maxScore\":5,\"skillId\":{{skillId}}}"
             },
             "auth": {
               "type": "basic",
@@ -6647,7 +6647,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/subscriptions/parents/{{parentId}}/status",
+            "url": "{{baseUrl}}/subscriptions/parents/me/status",
             "auth": {
               "type": "basic",
               "basic": [
@@ -6837,7 +6837,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/subscriptions/teachers/{{teacherId}}/status",
+            "url": "{{baseUrl}}/subscriptions/teachers/me/status",
             "auth": {
               "type": "basic",
               "basic": [
@@ -6884,7 +6884,7 @@
             "url": "{{baseUrl}}/classrooms",
             "body": {
               "mode": "raw",
-              "raw": "{\"name\":\"Second Classroom {{runSuffix}}\",\"gradeLevel\":6,\"section\":\"B\",\"teacherId\":{{teacherId}}}"
+              "raw": "{\"name\":\"Second Classroom {{runSuffix}}\",\"gradeLevel\":6,\"section\":\"B\"}"
             },
             "auth": {
               "type": "basic",
@@ -6965,7 +6965,7 @@
             "url": "{{baseUrl}}/classrooms",
             "body": {
               "mode": "raw",
-              "raw": "{\"name\":\"Third Classroom {{runSuffix}}\",\"gradeLevel\":6,\"section\":\"C\",\"teacherId\":{{teacherId}}}"
+              "raw": "{\"name\":\"Third Classroom {{runSuffix}}\",\"gradeLevel\":6,\"section\":\"C\"}"
             },
             "auth": {
               "type": "basic",
@@ -7066,7 +7066,7 @@
             "url": "{{baseUrl}}/classrooms",
             "body": {
               "mode": "raw",
-              "raw": "{\"name\":\"Paid Plan Classroom {{runSuffix}}\",\"gradeLevel\":6,\"section\":\"D\",\"teacherId\":{{teacherId}}}"
+              "raw": "{\"name\":\"Paid Plan Classroom {{runSuffix}}\",\"gradeLevel\":6,\"section\":\"D\"}"
             },
             "auth": {
               "type": "basic",
@@ -8065,6 +8065,522 @@
               "script": {
                 "exec": [
                   "pm.test('teacher on another teacherId legacy dashboard -> 403', () => pm.expect(pm.response.code).to.eql(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ab - Parent Cannot Create Activity (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/activities",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{parentUsername}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{parentPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Rogue Activity {{runSuffix}}\",\"type\":\"QUIZ\",\"status\":\"PENDING_REVIEW\",\"difficulty\":\"EASY\",\"maxScore\":10}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('expected 403', () => pm.expect(pm.response.code).to.eql(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ab - Student Cannot Create Activity (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/activities",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{studentUsername}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{studentPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Rogue Activity {{runSuffix}}\",\"type\":\"QUIZ\",\"status\":\"PENDING_REVIEW\",\"difficulty\":\"EASY\",\"maxScore\":10}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('expected 403', () => pm.expect(pm.response.code).to.eql(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ab - Unauthenticated Create Activity (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/activities",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Rogue Activity {{runSuffix}}\",\"type\":\"QUIZ\",\"status\":\"PENDING_REVIEW\",\"difficulty\":\"EASY\",\"maxScore\":10}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('expected 401', () => pm.expect(pm.response.code).to.eql(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ab - Parent Cannot Evaluate Submission (403)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/ai/activity-submissions/999999/evaluate",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{parentUsername}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{parentPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('expected 403', () => pm.expect(pm.response.code).to.eql(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ab - Student Cannot Generate Feedback (403)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/ai/activity-submissions/999999/generate-feedback",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{studentUsername}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{studentPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('expected 403', () => pm.expect(pm.response.code).to.eql(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ab - Unauthenticated Evaluate (401)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/ai/activity-submissions/999999/evaluate",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('expected 401', () => pm.expect(pm.response.code).to.eql(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ab - Student Cannot Accept Non-Owned Recommendation (403)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/recommendations/999999/accept",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{studentUsername}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{studentPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('expected 403', () => pm.expect(pm.response.code).to.eql(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ab - Teacher Cannot Accept Recommendation (403)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/recommendations/999999/accept",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{teacherUsername}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{teacherPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('expected 403', () => pm.expect(pm.response.code).to.eql(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ab - Unauthenticated Accept Recommendation (401)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/recommendations/999999/accept",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('expected 401', () => pm.expect(pm.response.code).to.eql(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ab - Parent Cannot Assign Activity (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/activities/1/assign/students/1",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{parentUsername}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{parentPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"dueDate\":\"2027-01-15T10:00:00\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('expected 403', () => pm.expect(pm.response.code).to.eql(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ab - Student Cannot Assign Activity (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/activities/1/assign/students/1",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{studentUsername}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{studentPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"dueDate\":\"2027-01-15T10:00:00\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('expected 403', () => pm.expect(pm.response.code).to.eql(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ab - Unauthenticated Assign Activity (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/activities/1/assign/students/1",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"dueDate\":\"2027-01-15T10:00:00\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('expected 401', () => pm.expect(pm.response.code).to.eql(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ab - Parent Cannot Approve Activity (403)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/activities/1/approve",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{parentUsername}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{parentPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reviewComment\":\"rogue\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('expected 403', () => pm.expect(pm.response.code).to.eql(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ab - Student Cannot Approve Activity (403)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/activities/1/approve",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{studentUsername}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{studentPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reviewComment\":\"rogue\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('expected 403', () => pm.expect(pm.response.code).to.eql(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ab - Unauthenticated Approve Activity (401)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/activities/1/approve",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reviewComment\":\"rogue\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('expected 401', () => pm.expect(pm.response.code).to.eql(401));"
                 ]
               }
             }

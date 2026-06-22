@@ -8,6 +8,7 @@ import com.example.qubaatisystem.DTO.In.ActivityAssignmentInDTO;
 import com.example.qubaatisystem.DTO.Out.ActivityAssignmentOutDTO;
 import com.example.qubaatisystem.DTO.Out.DueSoonNotificationsOutDTO;
 import com.example.qubaatisystem.DTO.Out.ExpireOverdueOutDTO;
+import com.example.qubaatisystem.Security.SecurityOwnershipService;
 import com.example.qubaatisystem.Service.ActivityAssignmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,11 +32,21 @@ import java.util.List;
 public class ActivityAssignmentController {
 
     private final ActivityAssignmentService activityAssignmentService;
+    private final SecurityOwnershipService security;
 
     // ---------- CRUD ----------
 
+    // Generic assignment create (used for date-controlled seeding). The assigner is derived from Basic Auth; a
+    // teacher may only create for their own activity + a student in their classroom.
     @PostMapping("/activity-assignments")
     public ResponseEntity<?> create(@Valid @RequestBody ActivityAssignmentInDTO dto) {
+        dto.setAssignedByTeacherId(security.resolveOwningTeacherId(dto.getAssignedByTeacherId()));
+        if (dto.getActivityId() != null) {
+            security.assertCurrentTeacherOwnsActivityOrAdmin(dto.getActivityId());
+        }
+        if (dto.getStudentId() != null) {
+            security.assertCurrentTeacherCanAssignToStudentOrAdmin(dto.getStudentId());
+        }
         activityAssignmentService.create(dto);
         return ResponseEntity.status(200).body(new ApiResponse("ActivityAssignment created successfully"));
     }
@@ -64,11 +75,16 @@ public class ActivityAssignmentController {
 
     // ---------- FLOW: ASSIGNMENT ----------
 
+    // The assigning teacher is derived from Basic Auth (body assignedByTeacherId ignored for teachers). A teacher
+    // may assign only their own activity, and only to a student in their classroom / to their own classroom.
     @PostMapping("/activities/{activityId}/assign/students/{studentId}")
     public ResponseEntity<ActivityAssignmentOutDTO> assignToStudent(
             @PathVariable Integer activityId,
             @PathVariable Integer studentId,
             @Valid @RequestBody ActivityAssignInDTO dto) {
+        dto.setAssignedByTeacherId(security.resolveOwningTeacherId(dto.getAssignedByTeacherId()));
+        security.assertCurrentTeacherOwnsActivityOrAdmin(activityId);
+        security.assertCurrentTeacherCanAssignToStudentOrAdmin(studentId);
         return ResponseEntity.status(200).body(activityAssignmentService.assignToStudent(activityId, studentId, dto));
     }
 
@@ -77,6 +93,9 @@ public class ActivityAssignmentController {
             @PathVariable Integer activityId,
             @PathVariable Integer classroomId,
             @Valid @RequestBody ActivityAssignInDTO dto) {
+        dto.setAssignedByTeacherId(security.resolveOwningTeacherId(dto.getAssignedByTeacherId()));
+        security.assertCurrentTeacherOwnsActivityOrAdmin(activityId);
+        security.assertCurrentTeacherOwnsClassroomOrAdmin(classroomId);
         return ResponseEntity.status(200).body(activityAssignmentService.assignToClassroom(activityId, classroomId, dto));
     }
 
@@ -84,6 +103,13 @@ public class ActivityAssignmentController {
     public ResponseEntity<ApiResponse> assignToBulkStudents(
             @PathVariable Integer activityId,
             @Valid @RequestBody ActivityAssignmentBulkInDTO dto) {
+        dto.setAssignedByTeacherId(security.resolveOwningTeacherId(dto.getAssignedByTeacherId()));
+        security.assertCurrentTeacherOwnsActivityOrAdmin(activityId);
+        if (dto.getStudentIds() != null) {
+            for (Integer sid : dto.getStudentIds()) {
+                security.assertCurrentTeacherCanAssignToStudentOrAdmin(sid);
+            }
+        }
         return ResponseEntity.status(200).body(activityAssignmentService.assignToBulkStudents(activityId, dto));
     }
 
@@ -92,8 +118,17 @@ public class ActivityAssignmentController {
         return ResponseEntity.status(200).body(activityAssignmentService.getAssignmentsByActivity(activityId));
     }
 
+    // Current student's own assignments — no studentId in the path.
+    @GetMapping("/students/me/activity-assignments")
+    public ResponseEntity<List<ActivityAssignmentOutDTO>> getMyAssignments() {
+        return ResponseEntity.status(200)
+                .body(activityAssignmentService.getAssignmentsByStudent(security.getCurrentStudentId()));
+    }
+
+    @Deprecated // prefer GET /students/me/activity-assignments
     @GetMapping("/students/{studentId}/activity-assignments")
     public ResponseEntity<List<ActivityAssignmentOutDTO>> getAssignmentsByStudent(@PathVariable Integer studentId) {
+        security.assertCurrentStudentOrAdmin(studentId);
         return ResponseEntity.status(200).body(activityAssignmentService.getAssignmentsByStudent(studentId));
     }
 

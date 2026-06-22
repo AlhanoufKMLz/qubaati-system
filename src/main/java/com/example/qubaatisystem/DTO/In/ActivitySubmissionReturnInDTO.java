@@ -15,7 +15,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ActivitySubmissionReturnInDTO {
 
-    @NotNull(message = "Teacher id is required")
+    // DEPRECATED actor id — IGNORED for the authenticated TEACHER (derived from Basic Auth);
+    // only an ADMIN may supply it to act on a teacher behalf. Optional; do not send it as a teacher.
     private Integer teacherId;
 
     @Size(max = 2000, message = "teacherFeedback must be at most 2000 characters")

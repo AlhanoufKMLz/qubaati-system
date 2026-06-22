@@ -15,7 +15,8 @@ import java.util.List;
 @AllArgsConstructor
 public class ActivityAssignmentBulkInDTO {
 
-    @NotNull(message = "assignedByTeacherId is required")
+    // DEPRECATED actor id — IGNORED for the authenticated TEACHER (derived from Basic Auth);
+    // only an ADMIN may supply it to act on a teacher behalf. Optional; do not send it as a teacher.
     private Integer assignedByTeacherId;
 
     @NotEmpty(message = "studentIds must not be null or empty")

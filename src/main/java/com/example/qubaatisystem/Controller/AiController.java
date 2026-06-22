@@ -60,11 +60,13 @@ public class AiController {
     public ResponseEntity<ActivitySubmissionOutDTO> evaluateSubmission(
             @PathVariable Integer submissionId,
             @RequestParam(defaultValue = "en") String language) {
+        security.assertCurrentTeacherOwnsSubmissionOrAdmin(submissionId);
         return ResponseEntity.status(200).body(aiActivityService.evaluateSubmission(submissionId, language));
     }
 
     @PostMapping("/activity-submissions/{submissionId}/generate-feedback")
     public ResponseEntity<ActivitySubmissionOutDTO> generateFeedback(@PathVariable Integer submissionId, @RequestParam(defaultValue = "student") String audience, @RequestParam(defaultValue = "en") String language) {
+        security.assertCurrentTeacherOwnsSubmissionOrAdmin(submissionId);
         return ResponseEntity.status(200).body(aiActivityService.generateFeedback(submissionId, audience, language));
     }
 
@@ -77,6 +79,7 @@ public class AiController {
 
     // ===== Legacy profile-ID AI endpoints — now ownership-protected (deprecated; prefer the /me versions) =====
 
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @PostMapping("/parents/{parentId}/children/{studentId}/summary")
     public ResponseEntity<?> getStudentSummary(@PathVariable Integer parentId,
                                                @PathVariable Integer studentId) {
@@ -84,12 +87,14 @@ public class AiController {
         return ResponseEntity.status(200).body(aiAnalysisService.analyzeStudent(parentId, studentId));
     }
 
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @PostMapping("/parents/{parentId}/dashboard-insight")
     public ResponseEntity<?> getFamilyDashboardInsight(@PathVariable Integer parentId) {
         security.assertCurrentParentOrAdmin(parentId);
         return ResponseEntity.status(200).body(aiAnalysisService.analyzeFamilyInsight(parentId));
     }
 
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @PostMapping("/teachers/{teacherId}/dashboard-insight")
     public ResponseEntity<?> getTeacherDashboardInsight(@PathVariable Integer teacherId) {
         security.assertCurrentTeacherOrAdmin(teacherId);

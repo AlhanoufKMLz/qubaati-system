@@ -42,6 +42,13 @@ public class StudentController {
         return ResponseEntity.status(200).body(studentService.getAll());
     }
 
+    // Current student's own profile — no studentId in the path.
+    @GetMapping("/me")
+    public ResponseEntity<?> getMe() {
+        return ResponseEntity.status(200).body(studentService.getById(security.getCurrentStudentId()));
+    }
+
+    @Deprecated // prefer GET /students/me
     @GetMapping("/{id}")
     public ResponseEntity<?> getById(@PathVariable Integer id) {
         security.assertCurrentStudentOrAdmin(id);
@@ -69,6 +76,17 @@ public class StudentController {
         return ResponseEntity.status(200).body(studentService.getAvailableCareerWorlds(studentId));
     }
 
+    @GetMapping("/me/skills/history")
+    public ResponseEntity<?> getMySkillHistory() {
+        return ResponseEntity.status(200).body(studentService.getSkillHistory(security.getCurrentStudentId()));
+    }
+
+    @GetMapping("/me/learning-style/history")
+    public ResponseEntity<?> getMyLearningStyleHistory() {
+        return ResponseEntity.status(200).body(studentService.getLearningStyleHistory(security.getCurrentStudentId()));
+    }
+
+    @Deprecated // prefer GET /students/me/skills/history
     @GetMapping("/{studentId}/skills/history")
     public ResponseEntity<?> getSkillHistory(@PathVariable Integer studentId) {
         security.assertCurrentStudentOrAdmin(studentId);

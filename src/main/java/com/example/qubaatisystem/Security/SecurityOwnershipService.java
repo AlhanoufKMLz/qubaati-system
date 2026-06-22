@@ -3,16 +3,23 @@ package com.example.qubaatisystem.Security;
 import com.example.qubaatisystem.Api.ApiException;
 import com.example.qubaatisystem.Enum.UserRole;
 import com.example.qubaatisystem.Model.Activity;
+import com.example.qubaatisystem.Model.ActivityAssignment;
+import com.example.qubaatisystem.Model.ActivitySubmission;
 import com.example.qubaatisystem.Model.Classroom;
 import com.example.qubaatisystem.Model.Notification;
 import com.example.qubaatisystem.Model.Parent;
+import com.example.qubaatisystem.Model.Recommendation;
 import com.example.qubaatisystem.Model.Student;
+import com.example.qubaatisystem.Model.StudentAnswer;
 import com.example.qubaatisystem.Model.Teacher;
 import com.example.qubaatisystem.Model.User;
 import com.example.qubaatisystem.Repository.ActivityRepository;
+import com.example.qubaatisystem.Repository.ActivitySubmissionRepository;
 import com.example.qubaatisystem.Repository.ClassroomRepository;
 import com.example.qubaatisystem.Repository.NotificationRepository;
 import com.example.qubaatisystem.Repository.ParentRepository;
+import com.example.qubaatisystem.Repository.RecommendationRepository;
+import com.example.qubaatisystem.Repository.StudentAnswerRepository;
 import com.example.qubaatisystem.Repository.StudentRepository;
 import com.example.qubaatisystem.Repository.TeacherRepository;
 import com.example.qubaatisystem.Repository.UserRepository;
@@ -39,6 +46,9 @@ public class SecurityOwnershipService {
     private final NotificationRepository notificationRepository;
     private final ClassroomRepository classroomRepository;
     private final ActivityRepository activityRepository;
+    private final ActivitySubmissionRepository activitySubmissionRepository;
+    private final StudentAnswerRepository studentAnswerRepository;
+    private final RecommendationRepository recommendationRepository;
 
     // ---- current principal ----
 
@@ -214,5 +224,76 @@ public class SecurityOwnershipService {
                 || !activity.getCreatedByTeacher().getId().equals(teacherId)) {
             throw new AccessDeniedException("That activity does not belong to you");
         }
+    }
+
+    /**
+     * The submission must belong to a teacher's activity/classroom (ADMIN bypasses). Ownership matches if the
+     * current teacher is the activity's createdByTeacher, the assignment's classroom teacher, OR the
+     * assignedByTeacher — accepting whichever relation is present.
+     */
+    public void assertCurrentTeacherOwnsSubmissionOrAdmin(Integer submissionId) {
+        if (isAdmin()) {
+            return;
+        }
+        Integer teacherId = getCurrentTeacherId();
+        ActivitySubmission submission = activitySubmissionRepository.findActivitySubmissionById(submissionId);
+        if (submission == null || submission.getActivityAssignment() == null) {
+            throw new AccessDeniedException("That submission does not belong to you");
+        }
+        ActivityAssignment assignment = submission.getActivityAssignment();
+        Teacher activityOwner = (assignment.getActivity() != null) ? assignment.getActivity().getCreatedByTeacher() : null;
+        Teacher classroomTeacher = (assignment.getClassroom() != null) ? assignment.getClassroom().getTeacher() : null;
+        boolean owns = teacherMatches(activityOwner, teacherId)
+                || teacherMatches(classroomTeacher, teacherId)
+                || teacherMatches(assignment.getAssignedByTeacher(), teacherId);
+        if (!owns) {
+            throw new AccessDeniedException("That submission does not belong to you");
+        }
+    }
+
+    /** Manual-grade path: the answer's submission must belong to the current teacher (ADMIN bypasses). */
+    public void assertCurrentTeacherOwnsAnswerSubmissionOrAdmin(Integer answerId) {
+        if (isAdmin()) {
+            return;
+        }
+        StudentAnswer answer = studentAnswerRepository.findStudentAnswerById(answerId);
+        if (answer == null || answer.getActivitySubmission() == null) {
+            throw new AccessDeniedException("That answer does not belong to you");
+        }
+        assertCurrentTeacherOwnsSubmissionOrAdmin(answer.getActivitySubmission().getId());
+    }
+
+    /** Recommendation accept/dismiss/complete: the recommendation must belong to the current student (ADMIN bypasses). */
+    public void assertCurrentStudentOwnsRecommendationOrAdmin(Integer recommendationId) {
+        if (isAdmin()) {
+            return;
+        }
+        Integer studentId = getCurrentStudentId();
+        Recommendation recommendation = recommendationRepository.findRecommendationById(recommendationId);
+        if (recommendation == null || recommendation.getStudent() == null
+                || !recommendation.getStudent().getId().equals(studentId)) {
+            throw new AccessDeniedException("That recommendation does not belong to you");
+        }
+    }
+
+    /**
+     * The current teacher may assign to a student only if that student is in one of the teacher's classrooms
+     * (Student → classroom → teacher). ADMIN bypasses. If the student has no classroom link, a non-admin teacher
+     * is denied (the strongest available check given the model).
+     */
+    public void assertCurrentTeacherCanAssignToStudentOrAdmin(Integer studentId) {
+        if (isAdmin()) {
+            return;
+        }
+        Integer teacherId = getCurrentTeacherId();
+        Student student = studentRepository.findStudentById(studentId);
+        if (student == null || student.getClassroom() == null || student.getClassroom().getTeacher() == null
+                || !student.getClassroom().getTeacher().getId().equals(teacherId)) {
+            throw new AccessDeniedException("You may only assign to students in your own classroom");
+        }
+    }
+
+    private boolean teacherMatches(Teacher teacher, Integer teacherId) {
+        return teacher != null && teacher.getId() != null && teacher.getId().equals(teacherId);
     }
 }

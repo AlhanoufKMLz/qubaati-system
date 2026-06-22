@@ -54,6 +54,7 @@ public class MissionFlowController {
 
     // ---------- available / default missions ----------
 
+    @Deprecated // prefer GET /students/me/missions/available
     @GetMapping("/students/{studentId}/missions/available")
     public ResponseEntity<AvailableMissionsOutDTO> getAvailableMissions(
             @PathVariable Integer studentId,
@@ -74,6 +75,16 @@ public class MissionFlowController {
         return ResponseEntity.status(200).body(missionService.getCareerWorldDefaultMissions(careerWorldId));
     }
 
+    // Current-student regenerate — no studentId in the path.
+    @PatchMapping("/students/me/missions/{missionId}/regenerate")
+    public ResponseEntity<AvailableMissionOutDTO> regenerateMyMission(
+            @PathVariable Integer missionId,
+            @Valid @RequestBody(required = false) MissionRegenerateInDTO request) {
+        String reason = request == null ? null : request.getReason();
+        return ResponseEntity.status(200).body(missionService.regenerateMission(security.getCurrentStudentId(), missionId, reason));
+    }
+
+    @Deprecated // prefer PATCH /students/me/missions/{missionId}/regenerate
     @PatchMapping("/students/{studentId}/missions/{missionId}/regenerate")
     public ResponseEntity<AvailableMissionOutDTO> regenerateMission(
             @PathVariable Integer studentId,
@@ -106,11 +117,14 @@ public class MissionFlowController {
 
     // ---------- mission session lifecycle ----------
 
+    // studentId is OPTIONAL: a student starts as themselves (derived from Basic Auth); an admin may pass studentId.
     @PostMapping("/missions/{missionId}/sessions/start")
     public ResponseEntity<StudentMissionAttemptOutDTO> startSession(
             @PathVariable Integer missionId,
-            @RequestParam Integer studentId) {
-        return ResponseEntity.status(200).body(missionSessionService.startSession(missionId, studentId));
+            @RequestParam(required = false) Integer studentId) {
+        Integer effectiveStudentId = (studentId != null) ? studentId : security.getCurrentStudentId();
+        security.assertCurrentStudentOrAdmin(effectiveStudentId);
+        return ResponseEntity.status(200).body(missionSessionService.startSession(missionId, effectiveStudentId));
     }
 
     @GetMapping("/mission-sessions/{sessionId}/current")
@@ -150,6 +164,18 @@ public class MissionFlowController {
 
     // ---------- recommendations ----------
 
+    // Current-student recommendation endpoints (no studentId in the path).
+    @GetMapping("/students/me/recommendations")
+    public ResponseEntity<List<RecommendationOutDTO>> getMyRecommendations() {
+        return ResponseEntity.status(200).body(recommendationService.getByStudent(security.getCurrentStudentId()));
+    }
+
+    @PostMapping("/students/me/recommendations/regenerate")
+    public ResponseEntity<List<RecommendationOutDTO>> regenerateMyRecommendations() {
+        return ResponseEntity.status(200).body(missionSessionService.regenerateRecommendations(security.getCurrentStudentId()));
+    }
+
+    @Deprecated // prefer GET /students/me/recommendations
     @GetMapping("/students/{studentId}/recommendations")
     public ResponseEntity<List<RecommendationOutDTO>> getStudentRecommendations(@PathVariable Integer studentId) {
         security.assertCurrentStudentOrAdmin(studentId);
@@ -157,24 +183,29 @@ public class MissionFlowController {
     }
 
     /** OPTIONAL manual re-run of the AI-first recommendations (the normal flow generates them on completion). */
+    @Deprecated // prefer POST /students/me/recommendations/regenerate
     @PostMapping("/students/{studentId}/recommendations/regenerate")
     public ResponseEntity<List<RecommendationOutDTO>> regenerateRecommendations(@PathVariable Integer studentId) {
         security.assertCurrentStudentOrAdmin(studentId);
         return ResponseEntity.status(200).body(missionSessionService.regenerateRecommendations(studentId));
     }
 
+    // accept / dismiss / complete are STUDENT-or-ADMIN actions, restricted to the owning student.
     @PatchMapping("/recommendations/{recommendationId}/accept")
     public ResponseEntity<RecommendationOutDTO> acceptRecommendation(@PathVariable Integer recommendationId) {
+        security.assertCurrentStudentOwnsRecommendationOrAdmin(recommendationId);
         return ResponseEntity.status(200).body(recommendationService.accept(recommendationId));
     }
 
     @PatchMapping("/recommendations/{recommendationId}/dismiss")
     public ResponseEntity<RecommendationOutDTO> dismissRecommendation(@PathVariable Integer recommendationId) {
+        security.assertCurrentStudentOwnsRecommendationOrAdmin(recommendationId);
         return ResponseEntity.status(200).body(recommendationService.dismiss(recommendationId));
     }
 
     @PatchMapping("/recommendations/{recommendationId}/complete")
     public ResponseEntity<RecommendationOutDTO> completeRecommendation(@PathVariable Integer recommendationId) {
+        security.assertCurrentStudentOwnsRecommendationOrAdmin(recommendationId);
         return ResponseEntity.status(200).body(recommendationService.complete(recommendationId));
     }
 
@@ -231,6 +262,12 @@ public class MissionFlowController {
 
     // ---------- skills ----------
 
+    @GetMapping("/students/me/skills")
+    public ResponseEntity<List<StudentSkillOutDTO>> getMySkills() {
+        return ResponseEntity.status(200).body(studentSkillService.getByStudentId(security.getCurrentStudentId()));
+    }
+
+    @Deprecated // prefer GET /students/me/skills
     @GetMapping("/students/{studentId}/skills")
     public ResponseEntity<List<StudentSkillOutDTO>> getStudentSkills(@PathVariable Integer studentId) {
         security.assertCurrentStudentOrAdmin(studentId);

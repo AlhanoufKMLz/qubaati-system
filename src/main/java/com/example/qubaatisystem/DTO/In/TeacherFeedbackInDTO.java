@@ -16,7 +16,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class TeacherFeedbackInDTO {
 
-    @NotNull(message = "Teacher id is required")
+    // DEPRECATED actor id — IGNORED for the authenticated TEACHER (derived from Basic Auth);
+    // only an ADMIN may supply it to act on a teacher behalf. Optional; do not send it as a teacher.
     private Integer teacherId;
 
     @NotBlank(message = "Teacher feedback is required")

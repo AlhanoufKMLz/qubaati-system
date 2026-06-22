@@ -5,6 +5,7 @@ import com.example.qubaatisystem.DTO.In.ActivityInDTO;
 import com.example.qubaatisystem.DTO.In.ActivityReviewActionInDTO;
 import com.example.qubaatisystem.DTO.Out.ActivityDetailsOutDTO;
 import com.example.qubaatisystem.Enum.ActivityStatus;
+import com.example.qubaatisystem.Security.SecurityOwnershipService;
 import com.example.qubaatisystem.Service.ActivityService;
 import com.example.qubaatisystem.Service.AiActivityService;
 import jakarta.validation.Valid;
@@ -28,11 +29,15 @@ public class ActivityController {
 
     private final ActivityService activityService;
     private final AiActivityService aiActivityService;
+    private final SecurityOwnershipService security;
 
     // ---------- CRUD ----------
 
+    // The owner is derived from Basic Auth: a TEACHER owns the activity (body teacherId ignored); an ADMIN may
+    // supply teacherId to create on a teacher's behalf. PARENT/STUDENT are blocked by role + this resolver.
     @PostMapping
     public ResponseEntity<?> create(@Valid @RequestBody ActivityInDTO dto) {
+        dto.setTeacherId(security.resolveOwningTeacherId(dto.getTeacherId()));
         activityService.create(dto);
         return ResponseEntity.status(200).body(new ApiResponse("Activity created successfully"));
     }
@@ -74,7 +79,11 @@ public class ActivityController {
     public ResponseEntity<?> approve(
             @PathVariable Integer activityId,
             @Valid @RequestBody ActivityReviewActionInDTO request) {
-        activityService.approveActivity(activityId, request.getTeacherId(), request.getReviewComment());
+        // Reviewer = the authenticated teacher who owns the activity (body teacherId ignored; admin has no
+        // teacher reviewer so review is teacher-owner-only).
+        Integer reviewerId = security.getCurrentTeacherId();
+        security.assertCurrentTeacherOwnsActivityOrAdmin(activityId);
+        activityService.approveActivity(activityId, reviewerId, request.getReviewComment());
         return ResponseEntity.status(200).body(new ApiResponse("Activity approved successfully"));
     }
 
@@ -82,7 +91,9 @@ public class ActivityController {
     public ResponseEntity<?> reject(
             @PathVariable Integer activityId,
             @Valid @RequestBody ActivityReviewActionInDTO request) {
-        activityService.rejectActivity(activityId, request.getTeacherId(), request.getReviewComment());
+        Integer reviewerId = security.getCurrentTeacherId();
+        security.assertCurrentTeacherOwnsActivityOrAdmin(activityId);
+        activityService.rejectActivity(activityId, reviewerId, request.getReviewComment());
         return ResponseEntity.status(200).body(new ApiResponse("Activity rejected successfully"));
     }
 
@@ -90,7 +101,9 @@ public class ActivityController {
     public ResponseEntity<?> requestRevision(
             @PathVariable Integer activityId,
             @Valid @RequestBody ActivityReviewActionInDTO request) {
-        activityService.requestRevision(activityId, request.getTeacherId(), request.getReviewComment());
+        Integer reviewerId = security.getCurrentTeacherId();
+        security.assertCurrentTeacherOwnsActivityOrAdmin(activityId);
+        activityService.requestRevision(activityId, reviewerId, request.getReviewComment());
         return ResponseEntity.status(200).body(new ApiResponse("Revision requested successfully"));
     }
 

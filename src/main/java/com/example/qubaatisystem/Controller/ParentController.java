@@ -40,18 +40,21 @@ public class ParentController {
         return ResponseEntity.status(200).body(parentService.getAll());
     }
 
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @GetMapping("/{id}")
     public ResponseEntity<?> getById(@PathVariable Integer id) {
         security.assertCurrentParentOrAdmin(id);
         return ResponseEntity.status(200).body(parentService.getById(id));
     }
 
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable Integer id, @Valid @RequestBody ParentInDTO dto) {
         security.assertCurrentParentOrAdmin(id);
         return ResponseEntity.status(200).body(parentService.update(id, dto));
     }
 
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Integer id) {
         security.assertCurrentParentOrAdmin(id);
@@ -59,12 +62,14 @@ public class ParentController {
         return ResponseEntity.status(200).body(new ApiResponse("Parent deleted successfully"));
     }
 
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @GetMapping("/{parentId}/dashboard")
     public ResponseEntity<?> getDashboard(@PathVariable Integer parentId) {
         security.assertCurrentParentOrAdmin(parentId);
         return ResponseEntity.status(200).body(parentService.getDashboard(parentId));
     }
 
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @PostMapping("/{parentId}/children")
     public ResponseEntity<?> createChild(@PathVariable Integer parentId,
                                          @Valid @RequestBody ChildCreateInDTO dto) {
@@ -72,12 +77,14 @@ public class ParentController {
         return ResponseEntity.status(200).body(parentService.createChild(parentId, dto));
     }
 
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @GetMapping("/{parentId}/children")
     public ResponseEntity<?> getChildren(@PathVariable Integer parentId) {
         security.assertCurrentParentOrAdmin(parentId);
         return ResponseEntity.status(200).body(parentService.getChildren(parentId));
     }
 
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @GetMapping("/{parentId}/children/{studentId}/overview")
     public ResponseEntity<?> getChildOverview(@PathVariable Integer parentId,
                                               @PathVariable Integer studentId) {
@@ -87,6 +94,7 @@ public class ParentController {
 
     // Combined learning profile: skills, learning style, activity performance, recent mission insight,
     // recommendations, and activity/mission completion for one child.
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @GetMapping("/{parentId}/children/{studentId}/learning-profile")
     public ResponseEntity<?> getChildLearningProfile(@PathVariable Integer parentId,
                                                      @PathVariable Integer studentId) {
@@ -94,6 +102,7 @@ public class ParentController {
         return ResponseEntity.status(200).body(parentService.getChildLearningProfile(parentId, studentId));
     }
 
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @PatchMapping("/{parentId}/children/{studentId}/profile")
     public ResponseEntity<?> updateChildProfile(@PathVariable Integer parentId,
                                                 @PathVariable Integer studentId,

@@ -25,6 +25,7 @@ public class ParentWeeklyReportController {
     private final SecurityOwnershipService security;
 
     // Manual demo trigger for ONE parent — generates via n8n and stores the result.
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @PostMapping("/{parentId}/weekly-report/generate")
     public ResponseEntity<?> generate(@PathVariable Integer parentId) {
         security.assertCurrentParentOrAdmin(parentId);
@@ -33,6 +34,7 @@ public class ParentWeeklyReportController {
     }
 
     // All stored reports for a parent (newest first).
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @GetMapping("/{parentId}/weekly-reports")
     public ResponseEntity<?> list(@PathVariable Integer parentId) {
         security.assertCurrentParentOrAdmin(parentId);
@@ -40,6 +42,7 @@ public class ParentWeeklyReportController {
     }
 
     // The most recent stored report for a parent.
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @GetMapping("/{parentId}/weekly-reports/latest")
     public ResponseEntity<?> latest(@PathVariable Integer parentId) {
         security.assertCurrentParentOrAdmin(parentId);

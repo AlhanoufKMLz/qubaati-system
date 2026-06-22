@@ -48,18 +48,21 @@ public class TeacherController {
         return ResponseEntity.status(200).body(teacherService.getAll());
     }
 
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @GetMapping("/{id}")
     public ResponseEntity<?> getById(@PathVariable Integer id) {
         security.assertCurrentTeacherOrAdmin(id);
         return ResponseEntity.status(200).body(teacherService.getById(id));
     }
 
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable Integer id, @Valid @RequestBody TeacherInDTO dto) {
         security.assertCurrentTeacherOrAdmin(id);
         return ResponseEntity.status(200).body(teacherService.update(id, dto));
     }
 
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Integer id) {
         security.assertCurrentTeacherOrAdmin(id);
@@ -67,6 +70,7 @@ public class TeacherController {
         return ResponseEntity.status(200).body(new ApiResponse("Teacher deleted successfully"));
     }
 
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @GetMapping("/{teacherId}/dashboard")
     public ResponseEntity<?> getDashboard(@PathVariable Integer teacherId) {
         security.assertCurrentTeacherOrAdmin(teacherId);
@@ -76,6 +80,7 @@ public class TeacherController {
     // ---------- teacher ownership / visibility (Student 1) ----------
 
     // Optional status filter (enum). GET /teachers/{id}/activities?status=DRAFT etc.
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @GetMapping("/{teacherId}/activities")
     public ResponseEntity<List<ActivityOutDTO>> getTeacherActivities(
             @PathVariable Integer teacherId,
@@ -84,12 +89,14 @@ public class TeacherController {
         return ResponseEntity.status(200).body(activityService.getActivitiesByTeacher(teacherId, status));
     }
 
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @GetMapping("/{teacherId}/classrooms")
     public ResponseEntity<List<TeacherDashboardClassroomOutDTO>> getTeacherClassrooms(@PathVariable Integer teacherId) {
         security.assertCurrentTeacherOrAdmin(teacherId);
         return ResponseEntity.status(200).body(teacherDashboardService.getTeacherClassrooms(teacherId));
     }
 
+    @Deprecated // legacy profile-id route — prefer the /me equivalent
     @GetMapping("/{teacherId}/students")
     public ResponseEntity<List<TeacherDashboardStudentOutDTO>> getTeacherStudents(@PathVariable Integer teacherId) {
         security.assertCurrentTeacherOrAdmin(teacherId);
