@@ -1,20 +1,23 @@
 package com.example.qubaatisystem;
 
 import com.example.qubaatisystem.Api.ApiException;
-import com.example.qubaatisystem.DTO.In.CheckoutInDTO;
 import com.example.qubaatisystem.DTO.Out.CheckoutOutDTO;
 import com.example.qubaatisystem.DTO.Out.PaymentReceiptOutDTO;
 import com.example.qubaatisystem.DTO.Out.PaymentStatusOutDTO;
 import com.example.qubaatisystem.Enum.PaymentStatus;
 import com.example.qubaatisystem.Enum.PlanAudience;
 import com.example.qubaatisystem.Enum.SubscriptionStatus;
+import com.example.qubaatisystem.Enum.UserRole;
 import com.example.qubaatisystem.Model.Parent;
 import com.example.qubaatisystem.Model.Payment;
 import com.example.qubaatisystem.Model.Subscription;
 import com.example.qubaatisystem.Model.SubscriptionPlan;
+import com.example.qubaatisystem.Model.Teacher;
+import com.example.qubaatisystem.Model.User;
 import com.example.qubaatisystem.Repository.ParentRepository;
 import com.example.qubaatisystem.Repository.PaymentRepository;
 import com.example.qubaatisystem.Repository.TeacherRepository;
+import com.example.qubaatisystem.Security.SecurityOwnershipService;
 import com.example.qubaatisystem.Service.EmailService;
 import com.example.qubaatisystem.Service.MoyasarService;
 import com.example.qubaatisystem.Service.PaymentService;
@@ -25,6 +28,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
@@ -50,6 +54,7 @@ class PaymentServiceTest {
     @Mock SubscriptionService subscriptionService;
     @Mock MoyasarService moyasarService;
     @Mock EmailService emailService;
+    @Mock SecurityOwnershipService security;
 
     @InjectMocks PaymentService paymentService;
 
@@ -67,9 +72,7 @@ class PaymentServiceTest {
         doThrow(new ApiException("Payment gateway is not configured."))
                 .when(moyasarService).requireConfigured();
 
-        CheckoutInDTO dto = new CheckoutInDTO("PARENT_PLUS", PlanAudience.PARENT, 1);
-
-        assertThatThrownBy(() -> paymentService.checkout(dto))
+        assertThatThrownBy(() -> paymentService.checkout())
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("not configured");
     }
@@ -79,58 +82,94 @@ class PaymentServiceTest {
         ReflectionTestUtils.setField(paymentService, "publishableKey", "");
         doNothing().when(moyasarService).requireConfigured();
 
-        CheckoutInDTO dto = new CheckoutInDTO("PARENT_PLUS", PlanAudience.PARENT, 1);
-
-        assertThatThrownBy(() -> paymentService.checkout(dto))
+        assertThatThrownBy(() -> paymentService.checkout())
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("publishable key");
     }
 
     @Test
-    void checkout_throwsApiException_whenFreePlanSelectedForPayment() {
+    void checkout_throwsAccessDenied_whenCallerIsAdmin() {
         doNothing().when(moyasarService).requireConfigured();
-        when(subscriptionService.findPlanByAudienceAndCode(PlanAudience.PARENT, "PARENT_FREE"))
-                .thenReturn(makePlan("PARENT_FREE", PlanAudience.PARENT, 0));
+        when(security.getCurrentUser()).thenReturn(makeUser(UserRole.ADMIN));
 
-        CheckoutInDTO dto = new CheckoutInDTO("PARENT_FREE", PlanAudience.PARENT, 1);
+        assertThatThrownBy(() -> paymentService.checkout())
+                .isInstanceOf(AccessDeniedException.class);
+    }
 
-        assertThatThrownBy(() -> paymentService.checkout(dto))
+    @Test
+    void checkout_throwsApiException_whenParentHasNoProfile() {
+        doNothing().when(moyasarService).requireConfigured();
+        when(security.getCurrentUser()).thenReturn(makeUser(UserRole.PARENT));
+        when(parentRepository.findParentByUserId(42)).thenReturn(null);
+
+        assertThatThrownBy(() -> paymentService.checkout())
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("No parent profile");
+    }
+
+    @Test
+    void checkout_throwsApiException_whenTeacherHasNoProfile() {
+        doNothing().when(moyasarService).requireConfigured();
+        when(security.getCurrentUser()).thenReturn(makeUser(UserRole.TEACHER));
+        when(teacherRepository.findTeacherByUserId(42)).thenReturn(null);
+
+        assertThatThrownBy(() -> paymentService.checkout())
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("No teacher profile");
+    }
+
+    @Test
+    void checkout_throwsApiException_whenPlanIsMarkedFree() {
+        doNothing().when(moyasarService).requireConfigured();
+        when(security.getCurrentUser()).thenReturn(makeUser(UserRole.PARENT));
+        Parent parent = new Parent();
+        parent.setId(1);
+        when(parentRepository.findParentByUserId(42)).thenReturn(parent);
+        when(subscriptionService.findPlanByAudienceAndCode(PlanAudience.PARENT, "PARENT_PLUS"))
+                .thenReturn(makePlan("PARENT_PLUS", PlanAudience.PARENT, 0));
+
+        assertThatThrownBy(() -> paymentService.checkout())
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("free");
     }
 
     @Test
-    void checkout_throwsApiException_whenParentNotFound() {
+    void checkout_returnsCheckoutOutDTO_forAuthenticatedParent() {
         doNothing().when(moyasarService).requireConfigured();
-        when(subscriptionService.findPlanByAudienceAndCode(PlanAudience.PARENT, "PARENT_PLUS"))
-                .thenReturn(makePlan("PARENT_PLUS", PlanAudience.PARENT, 5000));
-        when(parentRepository.findParentById(99)).thenReturn(null);
-
-        CheckoutInDTO dto = new CheckoutInDTO("PARENT_PLUS", PlanAudience.PARENT, 99);
-
-        assertThatThrownBy(() -> paymentService.checkout(dto))
-                .isInstanceOf(ApiException.class)
-                .hasMessageContaining("Parent not found");
-    }
-
-    @Test
-    void checkout_returnsCheckoutOutDTO_withLocalReferenceAndAmount() {
-        doNothing().when(moyasarService).requireConfigured();
-        when(subscriptionService.findPlanByAudienceAndCode(PlanAudience.PARENT, "PARENT_PLUS"))
-                .thenReturn(makePlan("PARENT_PLUS", PlanAudience.PARENT, 5000));
-
+        when(security.getCurrentUser()).thenReturn(makeUser(UserRole.PARENT));
         Parent parent = new Parent();
         parent.setId(1);
-        when(parentRepository.findParentById(1)).thenReturn(parent);
+        when(parentRepository.findParentByUserId(42)).thenReturn(parent);
+        when(subscriptionService.findPlanByAudienceAndCode(PlanAudience.PARENT, "PARENT_PLUS"))
+                .thenReturn(makePlan("PARENT_PLUS", PlanAudience.PARENT, 5000));
         when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        CheckoutOutDTO result = paymentService.checkout(new CheckoutInDTO("PARENT_PLUS", PlanAudience.PARENT, 1));
+        CheckoutOutDTO result = paymentService.checkout();
 
         assertThat(result.getLocalReference()).isNotNull().isNotBlank();
         assertThat(result.getAmount()).isEqualTo(5000);
         assertThat(result.getCurrency()).isEqualTo("SAR");
         assertThat(result.getPublishableKey()).isEqualTo("pk_test_placeholder");
-        // Callback URL must not contain ?ref=
+        assertThat(result.getCallbackUrl()).doesNotContain("ref=");
+    }
+
+    @Test
+    void checkout_returnsCheckoutOutDTO_forAuthenticatedTeacher() {
+        doNothing().when(moyasarService).requireConfigured();
+        when(security.getCurrentUser()).thenReturn(makeUser(UserRole.TEACHER));
+        Teacher teacher = new Teacher();
+        teacher.setId(5);
+        when(teacherRepository.findTeacherByUserId(42)).thenReturn(teacher);
+        when(subscriptionService.findPlanByAudienceAndCode(PlanAudience.TEACHER, "TEACHER_PRO"))
+                .thenReturn(makePlan("TEACHER_PRO", PlanAudience.TEACHER, 5000));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CheckoutOutDTO result = paymentService.checkout();
+
+        assertThat(result.getLocalReference()).isNotNull().isNotBlank();
+        assertThat(result.getAmount()).isEqualTo(5000);
+        assertThat(result.getCurrency()).isEqualTo("SAR");
+        assertThat(result.getPublishableKey()).isEqualTo("pk_test_placeholder");
         assertThat(result.getCallbackUrl()).doesNotContain("ref=");
     }
 
@@ -324,6 +363,87 @@ class PaymentServiceTest {
                 .hasMessageContaining("terminal");
     }
 
+    // ── getStatus / getReceipt — ownership ───────────────────────────────────
+
+    @Test
+    void getStatus_callsOwnershipCheck_andSucceeds_forOwningParent() {
+        Payment payment = makePayment("ref-owner-status", PaymentStatus.PAID, 5000);
+        payment.setPaidAt(LocalDateTime.now());
+        when(paymentRepository.findByLocalReference("ref-owner-status")).thenReturn(Optional.of(payment));
+        // security mock does nothing by default — ownership passes
+
+        PaymentStatusOutDTO result = paymentService.getStatus("ref-owner-status");
+
+        assertThat(result.getStatus()).isEqualTo(PaymentStatus.PAID);
+        verify(security).assertCurrentOwnsPaymentOrAdmin(payment);
+    }
+
+    @Test
+    void getReceipt_callsOwnershipCheck_andSucceeds_forOwningParent() {
+        String localRef = "ref-owner-receipt";
+        LocalDateTime paidAt = LocalDateTime.of(2026, 6, 22, 12, 0);
+
+        Parent parent = new Parent();
+        parent.setId(7);
+
+        Subscription sub = new Subscription();
+        sub.setStatus(SubscriptionStatus.ACTIVE);
+        sub.setStartsAt(paidAt);
+        sub.setEndsAt(paidAt.plusDays(30));
+
+        Payment payment = makePayment(localRef, PaymentStatus.PAID, 5000);
+        payment.setParent(parent);
+        payment.setPaidAt(paidAt);
+        payment.setSubscription(sub);
+
+        when(paymentRepository.findByLocalReference(localRef)).thenReturn(Optional.of(payment));
+        // security mock does nothing by default — ownership passes
+
+        paymentService.getReceipt(localRef);
+
+        verify(security).assertCurrentOwnsPaymentOrAdmin(payment);
+    }
+
+    @Test
+    void getStatus_throwsAccessDenied_whenDifferentUserChecksStatus() {
+        Payment payment = makePayment("ref-denied-status", PaymentStatus.PAID, 5000);
+        when(paymentRepository.findByLocalReference("ref-denied-status")).thenReturn(Optional.of(payment));
+        doThrow(new AccessDeniedException("You may only access your own parent data"))
+                .when(security).assertCurrentOwnsPaymentOrAdmin(any(Payment.class));
+
+        assertThatThrownBy(() -> paymentService.getStatus("ref-denied-status"))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("own parent data");
+    }
+
+    @Test
+    void getStatus_succeedsForAdmin_whenOwnershipCheckPasses() {
+        Payment payment = makePayment("ref-admin-status", PaymentStatus.PAID, 5000);
+        payment.setPaidAt(LocalDateTime.now());
+        when(paymentRepository.findByLocalReference("ref-admin-status")).thenReturn(Optional.of(payment));
+        doNothing().when(security).assertCurrentOwnsPaymentOrAdmin(any(Payment.class));
+
+        PaymentStatusOutDTO result = paymentService.getStatus("ref-admin-status");
+
+        assertThat(result.getStatus()).isEqualTo(PaymentStatus.PAID);
+        verify(security).assertCurrentOwnsPaymentOrAdmin(payment);
+    }
+
+    @Test
+    void getStatus_throwsApiException_notNpe_whenPaymentHasNoOwner() {
+        // Payment with neither parent nor teacher — assertCurrentOwnsPaymentOrAdmin must throw
+        // ApiException("Payment has no subscriber owner"), never NullPointerException.
+        Payment payment = makePayment("ref-no-owner", PaymentStatus.PENDING, 5000);
+        // makePayment leaves parent and teacher null by default
+        when(paymentRepository.findByLocalReference("ref-no-owner")).thenReturn(Optional.of(payment));
+        doThrow(new ApiException("Payment has no subscriber owner"))
+                .when(security).assertCurrentOwnsPaymentOrAdmin(any(Payment.class));
+
+        assertThatThrownBy(() -> paymentService.getStatus("ref-no-owner"))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("no subscriber owner");
+    }
+
     // ── getStatus ─────────────────────────────────────────────────────────────
 
     @Test
@@ -482,6 +602,13 @@ class PaymentServiceTest {
         payment.setStatus(status);
         payment.setCreatedAt(LocalDateTime.now());
         return payment;
+    }
+
+    private User makeUser(UserRole role) {
+        User user = new User();
+        user.setId(42);
+        user.setRole(role);
+        return user;
     }
 
     /** Builds a simulated Moyasar payment-fetch response with all required fields. */

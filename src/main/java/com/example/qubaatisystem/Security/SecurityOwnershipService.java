@@ -3,6 +3,7 @@ package com.example.qubaatisystem.Security;
 import com.example.qubaatisystem.Api.ApiException;
 import com.example.qubaatisystem.Enum.UserRole;
 import com.example.qubaatisystem.Model.Activity;
+import com.example.qubaatisystem.Model.Payment;
 import com.example.qubaatisystem.Model.ActivityAssignment;
 import com.example.qubaatisystem.Model.ActivitySubmission;
 import com.example.qubaatisystem.Model.Classroom;
@@ -127,6 +128,17 @@ public class SecurityOwnershipService {
             return requestedTeacherId;
         }
         throw new AccessDeniedException("Only a teacher or admin may perform this operation");
+    }
+
+    /** The authenticated user must own this Payment through their Parent or Teacher record (ADMIN bypasses). */
+    public void assertCurrentOwnsPaymentOrAdmin(Payment payment) {
+        if (payment.getParent() != null) {
+            assertCurrentParentOrAdmin(payment.getParent().getId());
+        } else if (payment.getTeacher() != null) {
+            assertCurrentTeacherOrAdmin(payment.getTeacher().getId());
+        } else {
+            throw new ApiException("Payment has no subscriber owner");
+        }
     }
 
     public void assertCurrentParentOrAdmin(Integer parentId) {

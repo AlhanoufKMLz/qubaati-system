@@ -1,22 +1,25 @@
 package com.example.qubaatisystem.Service;
 
 import com.example.qubaatisystem.Api.ApiException;
-import com.example.qubaatisystem.DTO.In.CheckoutInDTO;
 import com.example.qubaatisystem.DTO.Out.CheckoutOutDTO;
 import com.example.qubaatisystem.DTO.Out.PaymentReceiptOutDTO;
 import com.example.qubaatisystem.DTO.Out.PaymentStatusOutDTO;
 import com.example.qubaatisystem.Enum.PaymentStatus;
 import com.example.qubaatisystem.Enum.PlanAudience;
 import com.example.qubaatisystem.Enum.SubscriptionStatus;
+import com.example.qubaatisystem.Enum.UserRole;
 import com.example.qubaatisystem.Model.Parent;
 import com.example.qubaatisystem.Model.Payment;
 import com.example.qubaatisystem.Model.Subscription;
 import com.example.qubaatisystem.Model.SubscriptionPlan;
 import com.example.qubaatisystem.Model.Teacher;
+import com.example.qubaatisystem.Model.User;
 import com.example.qubaatisystem.Repository.ParentRepository;
 import com.example.qubaatisystem.Repository.PaymentRepository;
 import com.example.qubaatisystem.Repository.TeacherRepository;
+import com.example.qubaatisystem.Security.SecurityOwnershipService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -44,6 +47,7 @@ public class PaymentService {
     private final SubscriptionService subscriptionService;
     private final MoyasarService moyasarService;
     private final EmailService emailService;
+    private final SecurityOwnershipService security;
 
     // ── Checkout ─────────────────────────────────────────────────────────────
 
@@ -55,32 +59,40 @@ public class PaymentService {
      * that the callback can read it back from Moyasar without relying on query params.
      */
     @Transactional
-    public CheckoutOutDTO checkout(CheckoutInDTO dto) {
-        moyasarService.requireConfigured();           // validates secret key
+    public CheckoutOutDTO checkout() {
+        moyasarService.requireConfigured();
         if (publishableKey == null || publishableKey.isBlank()) {
             throw new ApiException("Payment gateway publishable key is not configured. Please contact support.");
         }
 
-        SubscriptionPlan plan = subscriptionService.findPlanByAudienceAndCode(
-                dto.getSubscriberType(), dto.getPlanCode());
-
-        if (plan.getPriceAmount() == null || plan.getPriceAmount() == 0) {
-            throw new ApiException("Plan " + dto.getPlanCode() + " is free and does not require payment.");
-        }
-
+        User currentUser = security.getCurrentUser();
         Parent parent = null;
         Teacher teacher = null;
+        PlanAudience audience;
+        String planCode;
 
-        if (dto.getSubscriberType() == PlanAudience.PARENT) {
-            parent = parentRepository.findParentById(dto.getSubscriberId());
+        if (currentUser.getRole() == UserRole.PARENT) {
+            parent = parentRepository.findParentByUserId(currentUser.getId());
             if (parent == null) {
-                throw new ApiException("Parent not found: " + dto.getSubscriberId());
+                throw new ApiException("No parent profile found for current user.");
             }
-        } else {
-            teacher = teacherRepository.findTeacherById(dto.getSubscriberId());
+            audience = PlanAudience.PARENT;
+            planCode = "PARENT_PLUS";
+        } else if (currentUser.getRole() == UserRole.TEACHER) {
+            teacher = teacherRepository.findTeacherByUserId(currentUser.getId());
             if (teacher == null) {
-                throw new ApiException("Teacher not found: " + dto.getSubscriberId());
+                throw new ApiException("No teacher profile found for current user.");
             }
+            audience = PlanAudience.TEACHER;
+            planCode = "TEACHER_PRO";
+        } else {
+            throw new AccessDeniedException("Only parents and teachers may initiate a subscription.");
+        }
+
+        SubscriptionPlan plan = subscriptionService.findPlanByAudienceAndCode(audience, planCode);
+
+        if (plan.getPriceAmount() == null || plan.getPriceAmount() == 0) {
+            throw new ApiException("Plan " + planCode + " is free and does not require payment.");
         }
 
         String localRef = UUID.randomUUID().toString();
@@ -228,6 +240,7 @@ public class PaymentService {
     public PaymentStatusOutDTO getStatus(String localReference) {
         Payment payment = paymentRepository.findByLocalReference(localReference)
                 .orElseThrow(() -> new ApiException("Payment not found: " + localReference));
+        security.assertCurrentOwnsPaymentOrAdmin(payment);
         return new PaymentStatusOutDTO(
                 payment.getLocalReference(),
                 payment.getStatus(),
@@ -247,6 +260,7 @@ public class PaymentService {
     public PaymentReceiptOutDTO getReceipt(String localReference) {
         Payment payment = paymentRepository.findByLocalReference(localReference)
                 .orElseThrow(() -> new ApiException("Payment not found: " + localReference));
+        security.assertCurrentOwnsPaymentOrAdmin(payment);
 
         if (payment.getStatus() != PaymentStatus.PAID) {
             throw new ApiException(

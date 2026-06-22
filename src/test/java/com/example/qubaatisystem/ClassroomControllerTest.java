@@ -4,6 +4,7 @@ import com.example.qubaatisystem.Api.ApiException;
 import com.example.qubaatisystem.Controller.ClassroomController;
 import com.example.qubaatisystem.DTO.Out.ClassroomDashboardOutDTO;
 import com.example.qubaatisystem.DTO.Out.StudentOutDTO;
+import com.example.qubaatisystem.Security.SecurityOwnershipService;
 import com.example.qubaatisystem.Service.ClassroomService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,7 @@ class ClassroomControllerTest {
     @Autowired MockMvc mockMvc;
 
     @MockitoBean ClassroomService classroomService;
+    @MockitoBean SecurityOwnershipService security;
 
     @Test
     void enrollStudent_returns200WithSuccessMessage() throws Exception {

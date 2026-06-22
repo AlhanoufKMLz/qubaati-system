@@ -5,6 +5,7 @@ import com.example.qubaatisystem.Controller.ParentController;
 import com.example.qubaatisystem.DTO.In.ChildCreateInDTO;
 import com.example.qubaatisystem.DTO.In.ChildUpdateProfileInDTO;
 import com.example.qubaatisystem.DTO.Out.StudentOutDTO;
+import com.example.qubaatisystem.Security.SecurityOwnershipService;
 import com.example.qubaatisystem.Service.ParentService;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,7 @@ class ParentControllerTest {
     @Autowired ObjectMapper objectMapper;
 
     @MockitoBean ParentService parentService;
+    @MockitoBean SecurityOwnershipService security;
 
     @Test
     void createChild_returns200WithCreatedStudentDTO() throws Exception {

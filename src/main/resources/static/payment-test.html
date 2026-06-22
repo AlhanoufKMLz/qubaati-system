@@ -27,7 +27,7 @@
       margin-bottom: 24px;
     }
     label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-    select, input[type="number"] {
+    select, input[type="number"], input[type="text"], input[type="password"] {
       width: 100%;
       padding: 8px 10px;
       font-size: 15px;
@@ -76,22 +76,17 @@
 
   <!-- ── Step 1: checkout form ─────────────────────────────────────── -->
   <div id="step-checkout">
-    <label for="subscriberType">Subscriber type</label>
-    <select id="subscriberType">
-      <option value="PARENT">PARENT</option>
-      <option value="TEACHER">TEACHER</option>
-    </select>
+    <div class="note">
+      Sign in with your Parent or Teacher account. The subscription plan is selected automatically.
+    </div>
 
-    <label for="subscriberId">Subscriber ID</label>
-    <input type="number" id="subscriberId" placeholder="e.g. 1" min="1" />
+    <label for="authUsername">Username</label>
+    <input type="text" id="authUsername" placeholder="e.g. parent_user" autocomplete="username" />
 
-    <label for="planCode">Plan</label>
-    <select id="planCode">
-      <option value="PARENT_PLUS">PARENT_PLUS</option>
-      <option value="TEACHER_PRO">TEACHER_PRO</option>
-    </select>
+    <label for="authPassword">Password</label>
+    <input type="password" id="authPassword" autocomplete="current-password" />
 
-    <button id="startBtn" onclick="startCheckout()">Start Sandbox Payment</button>
+    <button id="startBtn" onclick="startCheckout()">Start Subscription Payment</button>
   </div>
 
   <div id="status"></div>
@@ -111,12 +106,15 @@
     }
 
     function startCheckout() {
-      var type = document.getElementById('subscriberType').value;
-      var id   = parseInt(document.getElementById('subscriberId').value, 10);
-      var plan = document.getElementById('planCode').value;
+      var username = document.getElementById('authUsername').value.trim();
+      var password = document.getElementById('authPassword').value;
 
-      if (!id || id < 1) {
-        showStatus('Please enter a valid Subscriber ID.', 'error');
+      if (!username) {
+        showStatus('Please enter your username.', 'error');
+        return;
+      }
+      if (!password) {
+        showStatus('Please enter your password.', 'error');
         return;
       }
 
@@ -127,14 +125,12 @@
 
       fetch('/api/v1/payments/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          planCode: plan,
-          subscriberType: type,
-          subscriberId: id
-        })
+        headers: {
+          'Authorization': 'Basic ' + btoa(username + ':' + password)
+        }
       })
       .then(function(res) {
+        if (res.status === 401) { throw new Error('UNAUTHORIZED'); }
         if (!res.ok) {
           return res.text().then(function(t) { throw new Error(t || res.status); });
         }
@@ -164,8 +160,13 @@
       })
       .catch(function(err) {
         btn.disabled = false;
-        btn.textContent = 'Start Sandbox Payment';
-        showStatus('Checkout failed: ' + err.message, 'error');
+        btn.textContent = 'Start Subscription Payment';
+        showStatus(
+          err.message === 'UNAUTHORIZED'
+            ? 'Invalid username or password.'
+            : 'Checkout failed: ' + err.message,
+          'error'
+        );
       });
     }
   </script>

@@ -37,11 +37,11 @@ public class QuestionService {
     }
 
     public void create(QuestionInDTO dto) {
-        Question question = modelMapper.map(dto, Question.class);
+        Question question = new Question();
+        copyScalars(dto, question);
 
         applyRelationships(question, dto);
 
-        question.setId(null);
         questionRepository.save(question);
     }
 
@@ -51,10 +51,7 @@ public class QuestionService {
             throw new ApiException("Question with id " + id + " not found");
         }
 
-        // Clear relationships first so ModelMapper only copies scalar fields
-        // (never mutates the ids of the currently-managed related entities).
-        question.setActivity(null);
-        modelMapper.map(dto, question);
+        copyScalars(dto, question);
         question.setId(id);
 
         applyRelationships(question, dto);
@@ -72,7 +69,14 @@ public class QuestionService {
 
     // ---------- helpers ----------
 
-    // Relationship IDs from the input DTO are resolved manually (ModelMapper maps scalar fields only).
+    private void copyScalars(QuestionInDTO dto, Question question) {
+        question.setContent(dto.getContent());
+        question.setType(dto.getType());
+        question.setPoints(dto.getPoints());
+        question.setDifficulty(dto.getDifficulty());
+        question.setCorrectAnswer(dto.getCorrectAnswer());
+    }
+
     private void applyRelationships(Question question, QuestionInDTO dto) {
         Activity activity = activityRepository.findActivityById(dto.getActivityId());
         if (activity == null) {

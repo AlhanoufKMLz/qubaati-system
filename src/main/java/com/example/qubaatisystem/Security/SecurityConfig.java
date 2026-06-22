@@ -1,9 +1,9 @@
 package com.example.qubaatisystem.Security;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -37,6 +37,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         // ---- public (no auth) ----
+                        // Local sandbox tester page — serves the HTML form with username/password inputs.
+                        .requestMatchers(HttpMethod.GET, "/payment-test.html").permitAll()
                         // Moyasar redirects here after payment with no Qubaati credentials. PaymentService still
                         // verifies the payment with Moyasar before activating anything.
                         .requestMatchers(HttpMethod.GET, "/api/v1/payments/callback").permitAll()
@@ -84,7 +86,14 @@ public class SecurityConfig {
                         // submissions, assignments, notifications, recommendations, user notifications, etc.
                         .anyRequest().authenticated()
                 )
-                .httpBasic(Customizer.withDefaults());
+                .httpBasic(basic -> basic.authenticationEntryPoint(
+                        (request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json;charset=UTF-8");
+                            // No WWW-Authenticate header — prevents the browser-native Basic Auth popup.
+                            response.getWriter().write("{\"message\":\"Unauthorized\"}");
+                        }
+                ));
 
         return http.build();
     }
