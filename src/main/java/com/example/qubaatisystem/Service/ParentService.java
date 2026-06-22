@@ -5,7 +5,9 @@ import com.example.qubaatisystem.DTO.In.ChildCreateInDTO;
 import com.example.qubaatisystem.DTO.In.ChildUpdateProfileInDTO;
 import com.example.qubaatisystem.DTO.In.ParentInDTO;
 import com.example.qubaatisystem.DTO.In.StudentInDTO;
+import com.example.qubaatisystem.DTO.Out.ActivitySubmissionOutDTO;
 import com.example.qubaatisystem.DTO.Out.ChildLearningProfileOutDTO;
+import com.example.qubaatisystem.DTO.Out.MissionSessionOutDTO;
 import com.example.qubaatisystem.DTO.Out.ParentDashboardOutDTO;
 import com.example.qubaatisystem.DTO.Out.ParentOutDTO;
 import com.example.qubaatisystem.DTO.Out.StudentOutDTO;
@@ -31,6 +33,8 @@ public class ParentService {
     private final UserRepository userRepository;
     private final StudentService studentService;
     private final ChildLearningProfileService childLearningProfileService;
+    private final ActivitySubmissionService activitySubmissionService;
+    private final MissionSessionService missionSessionService;
     private final ModelMapper modelMapper;
     private final PasswordEncoder passwordEncoder;
 
@@ -184,6 +188,16 @@ public class ParentService {
             throw new ApiException("Parent with id " + parentId + " not found");
         }
         return childLearningProfileService.getLearningProfile(parentId, studentId);
+    }
+
+    // ========== Child history (parent-safe read-only views) ==========
+
+    public List<ActivitySubmissionOutDTO> getChildActivityResults(Integer studentId) {
+        return activitySubmissionService.getStudentActivityResults(studentId);
+    }
+
+    public List<MissionSessionOutDTO> getChildMissionHistory(Integer studentId) {
+        return missionSessionService.getMissionHistoryByStudentId(studentId);
     }
 
     // ---------- helpers ----------

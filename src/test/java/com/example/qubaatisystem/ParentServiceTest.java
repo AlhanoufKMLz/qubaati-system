@@ -4,10 +4,14 @@ import com.example.qubaatisystem.Api.ApiException;
 import com.example.qubaatisystem.DTO.In.ChildCreateInDTO;
 import com.example.qubaatisystem.DTO.In.ChildUpdateProfileInDTO;
 import com.example.qubaatisystem.DTO.In.StudentInDTO;
+import com.example.qubaatisystem.DTO.Out.ActivitySubmissionOutDTO;
+import com.example.qubaatisystem.DTO.Out.MissionSessionOutDTO;
 import com.example.qubaatisystem.DTO.Out.StudentOutDTO;
 import com.example.qubaatisystem.Model.Parent;
 import com.example.qubaatisystem.Repository.ParentRepository;
 import com.example.qubaatisystem.Repository.UserRepository;
+import com.example.qubaatisystem.Service.ActivitySubmissionService;
+import com.example.qubaatisystem.Service.MissionSessionService;
 import com.example.qubaatisystem.Service.ParentService;
 import com.example.qubaatisystem.Service.StudentService;
 import org.junit.jupiter.api.Test;
@@ -33,6 +37,8 @@ class ParentServiceTest {
     @Mock ParentRepository parentRepository;
     @Mock UserRepository userRepository;
     @Mock StudentService studentService;
+    @Mock ActivitySubmissionService activitySubmissionService;
+    @Mock MissionSessionService missionSessionService;
     @Mock ModelMapper modelMapper;
 
     @InjectMocks ParentService parentService;
@@ -111,6 +117,58 @@ class ParentServiceTest {
         assertThatThrownBy(() -> parentService.getChildOverview(1, 5))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("does not belong");
+    }
+
+    // ── updateChildProfile ───────────────────────────────────────────────────
+
+    // ── getChildActivityResults ──────────────────────────────────────────────
+
+    @Test
+    void getChildActivityResults_returnsList_whenSubmissionsExist() {
+        ActivitySubmissionOutDTO s1 = new ActivitySubmissionOutDTO();
+        s1.setId(10);
+        ActivitySubmissionOutDTO s2 = new ActivitySubmissionOutDTO();
+        s2.setId(11);
+        when(activitySubmissionService.getStudentActivityResults(3)).thenReturn(List.of(s1, s2));
+
+        List<ActivitySubmissionOutDTO> result = parentService.getChildActivityResults(3);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getId()).isEqualTo(10);
+    }
+
+    @Test
+    void getChildActivityResults_returnsEmptyList_whenNoSubmissions() {
+        when(activitySubmissionService.getStudentActivityResults(3)).thenReturn(List.of());
+
+        List<ActivitySubmissionOutDTO> result = parentService.getChildActivityResults(3);
+
+        assertThat(result).isEmpty();
+    }
+
+    // ── getChildMissionHistory ───────────────────────────────────────────────
+
+    @Test
+    void getChildMissionHistory_returnsList_whenSessionsExist() {
+        MissionSessionOutDTO m1 = new MissionSessionOutDTO();
+        m1.setId(20);
+        MissionSessionOutDTO m2 = new MissionSessionOutDTO();
+        m2.setId(21);
+        when(missionSessionService.getMissionHistoryByStudentId(3)).thenReturn(List.of(m1, m2));
+
+        List<MissionSessionOutDTO> result = parentService.getChildMissionHistory(3);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getId()).isEqualTo(20);
+    }
+
+    @Test
+    void getChildMissionHistory_returnsEmptyList_whenNoSessions() {
+        when(missionSessionService.getMissionHistoryByStudentId(3)).thenReturn(List.of());
+
+        List<MissionSessionOutDTO> result = parentService.getChildMissionHistory(3);
+
+        assertThat(result).isEmpty();
     }
 
     // ── updateChildProfile ───────────────────────────────────────────────────

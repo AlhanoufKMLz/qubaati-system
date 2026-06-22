@@ -78,6 +78,13 @@ public class MissionSessionService {
         return toOut(requireSession(id));
     }
 
+    public List<MissionSessionOutDTO> getMissionHistoryByStudentId(Integer studentId) {
+        return missionSessionRepository.findMissionSessionsByStudentId(studentId)
+                .stream()
+                .map(this::toOut)
+                .toList();
+    }
+
     // Generic mutation of MissionSession is DISABLED: it would let a client create/advance/relabel a session
     // outside the guarded multi-step flow (start/decision/complete/abandon). Read endpoints stay.
     public void create(MissionSessionInDTO dto) {

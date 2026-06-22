@@ -142,4 +142,16 @@ public class ParentController {
         security.assertParentOwnsStudentOrAdmin(parentId, studentId);
         return ResponseEntity.status(200).body(parentService.getChildLearningProfile(parentId, studentId));
     }
+
+    @GetMapping("/me/children/{studentId}/activity-results")
+    public ResponseEntity<?> getMyChildActivityResults(@PathVariable Integer studentId) {
+        security.assertCurrentParentOwnsChildOrAdmin(studentId);
+        return ResponseEntity.status(200).body(parentService.getChildActivityResults(studentId));
+    }
+
+    @GetMapping("/me/children/{studentId}/mission-history")
+    public ResponseEntity<?> getMyChildMissionHistory(@PathVariable Integer studentId) {
+        security.assertCurrentParentOwnsChildOrAdmin(studentId);
+        return ResponseEntity.status(200).body(parentService.getChildMissionHistory(studentId));
+    }
 }
