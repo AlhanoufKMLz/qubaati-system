@@ -9,6 +9,7 @@ import com.example.qubaatisystem.DTO.Out.ActivitySubmissionTeacherDetailsOutDTO;
 import com.example.qubaatisystem.DTO.Out.StudentActivityAttemptOutDTO;
 import com.example.qubaatisystem.Service.ActivitySubmissionService;
 import jakarta.validation.Valid;
+import com.example.qubaatisystem.Security.SecurityOwnershipService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -30,6 +31,7 @@ import java.util.List;
 public class ActivitySubmissionController {
 
     private final ActivitySubmissionService activitySubmissionService;
+    private final SecurityOwnershipService security;
 
     // ---------- CRUD ----------
 
@@ -93,8 +95,16 @@ public class ActivitySubmissionController {
         return ResponseEntity.status(200).body(activitySubmissionService.getSubmissionFeedback(submissionId));
     }
 
+    @GetMapping("/students/me/activity-results")
+    public ResponseEntity<List<ActivitySubmissionOutDTO>> getMyActivityResults() {
+        return ResponseEntity.status(200)
+                .body(activitySubmissionService.getStudentActivityResults(security.getCurrentStudentId()));
+    }
+
+    @Deprecated // prefer GET /students/me/activity-results
     @GetMapping("/students/{studentId}/activity-results")
     public ResponseEntity<List<ActivitySubmissionOutDTO>> getStudentActivityResults(@PathVariable Integer studentId) {
+        security.assertCurrentStudentOrAdmin(studentId);
         return ResponseEntity.status(200).body(activitySubmissionService.getStudentActivityResults(studentId));
     }
 
@@ -102,7 +112,9 @@ public class ActivitySubmissionController {
     public ResponseEntity<ApiResponse> returnToStudent(
             @PathVariable Integer submissionId,
             @Valid @RequestBody ActivitySubmissionReturnInDTO request) {
-        activitySubmissionService.returnToStudent(submissionId, request.getTeacherId(), request.getTeacherFeedback());
+        security.assertCurrentTeacherOwnsSubmissionOrAdmin(submissionId);
+        Integer actingTeacherId = security.resolveOwningTeacherId(request.getTeacherId());
+        activitySubmissionService.returnToStudent(submissionId, actingTeacherId, request.getTeacherFeedback());
         return ResponseEntity.status(200).body(new ApiResponse("Submission returned to student successfully"));
     }
 
@@ -110,17 +122,28 @@ public class ActivitySubmissionController {
     public ResponseEntity<ActivitySubmissionOutDTO> addTeacherFeedback(
             @PathVariable Integer submissionId,
             @Valid @RequestBody TeacherFeedbackInDTO request) {
+        security.assertCurrentTeacherOwnsSubmissionOrAdmin(submissionId);
+        Integer actingTeacherId = security.resolveOwningTeacherId(request.getTeacherId());
         return ResponseEntity.status(200).body(
-                activitySubmissionService.addTeacherFeedback(submissionId, request.getTeacherId(), request.getTeacherFeedback()));
+                activitySubmissionService.addTeacherFeedback(submissionId, actingTeacherId, request.getTeacherFeedback()));
     }
 
     @PatchMapping("/activity-submissions/{submissionId}/reopen")
     public ResponseEntity<StudentActivityAttemptOutDTO> reopenSubmission(@PathVariable Integer submissionId) {
+        security.assertCurrentTeacherOwnsSubmissionOrAdmin(submissionId);
         return ResponseEntity.status(200).body(activitySubmissionService.reopenSubmission(submissionId));
     }
 
+    @GetMapping("/teachers/me/activity-submissions/pending-grading")
+    public ResponseEntity<List<ActivitySubmissionOutDTO>> getMyPendingGradingSubmissions() {
+        return ResponseEntity.status(200)
+                .body(activitySubmissionService.getPendingGradingSubmissions(security.getCurrentTeacherId()));
+    }
+
+    @Deprecated // prefer GET /teachers/me/activity-submissions/pending-grading
     @GetMapping("/teachers/{teacherId}/activity-submissions/pending-grading")
     public ResponseEntity<List<ActivitySubmissionOutDTO>> getPendingGradingSubmissions(@PathVariable Integer teacherId) {
+        security.assertCurrentTeacherOrAdmin(teacherId);
         return ResponseEntity.status(200).body(activitySubmissionService.getPendingGradingSubmissions(teacherId));
     }
 
@@ -136,9 +159,10 @@ public class ActivitySubmissionController {
         return ResponseEntity.status(200).body(activitySubmissionService.getSubmissionsByActivity(activityId));
     }
 
-    // Teacher-only: includes answers + correct answers. Never exposed to students.
+    // Teacher-only: includes answers + correct answers. Never exposed to students. Ownership-checked.
     @GetMapping("/activity-submissions/{submissionId}/teacher-details")
     public ResponseEntity<ActivitySubmissionTeacherDetailsOutDTO> getTeacherSubmissionDetails(@PathVariable Integer submissionId) {
+        security.assertCurrentTeacherOwnsSubmissionOrAdmin(submissionId);
         return ResponseEntity.status(200).body(activitySubmissionService.getTeacherSubmissionDetails(submissionId));
     }
 }

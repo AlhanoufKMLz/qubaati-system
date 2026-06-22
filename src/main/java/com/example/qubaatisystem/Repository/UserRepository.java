@@ -8,4 +8,7 @@ import org.springframework.stereotype.Repository;
 public interface UserRepository extends JpaRepository<User, Integer> {
 
     User findUserById(Integer id);
+
+    // Spring Security Basic Auth principal lookup (entity or null — project convention, no Optional).
+    User findUserByUsername(String username);
 }

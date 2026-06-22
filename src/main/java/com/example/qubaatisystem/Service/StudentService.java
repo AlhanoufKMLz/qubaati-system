@@ -23,6 +23,7 @@ import com.example.qubaatisystem.Repository.StudentRepository;
 import com.example.qubaatisystem.Repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +42,7 @@ public class StudentService {
     private final SkillProgressHistoryRepository skillProgressHistoryRepository;
     private final LearningStyleHistoryRepository learningStyleHistoryRepository;
     private final ModelMapper modelMapper;
+    private final PasswordEncoder passwordEncoder;
 
     public List<StudentOutDTO> getAll() {
         return studentRepository.findAll()
@@ -126,7 +128,7 @@ public class StudentService {
         User user = new User();
         user.setUsername(studentInDTO.getUsername());
         user.setEmail(studentInDTO.getEmail());
-        user.setPassword(studentInDTO.getPassword());
+        user.setPassword(passwordEncoder.encode(studentInDTO.getPassword()));
         user.setRole(UserRole.STUDENT);
         User savedUser = userRepository.save(user);
 
@@ -172,7 +174,7 @@ public class StudentService {
         User user = student.getUser();
         user.setUsername(studentInDTO.getUsername());
         user.setEmail(studentInDTO.getEmail());
-        user.setPassword(studentInDTO.getPassword());
+        user.setPassword(passwordEncoder.encode(studentInDTO.getPassword()));
         user.setRole(UserRole.STUDENT);
         userRepository.save(user);
 

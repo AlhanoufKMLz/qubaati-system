@@ -8,4 +8,7 @@ import org.springframework.stereotype.Repository;
 public interface TeacherRepository extends JpaRepository<Teacher, Integer> {
 
     Teacher findTeacherById(Integer id);
+
+    // Resolve the teacher profile of the authenticated user (entity or null — no Optional).
+    Teacher findTeacherByUserId(Integer userId);
 }

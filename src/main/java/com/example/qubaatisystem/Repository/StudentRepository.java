@@ -18,4 +18,7 @@ public interface StudentRepository extends JpaRepository<Student, Integer> {
     int countByClassroomTeacherId(Integer teacherId);
 
     int countByParentId(Integer parentId);
+
+    // Resolve the student profile of the authenticated user (entity or null — no Optional).
+    Student findStudentByUserId(Integer userId);
 }

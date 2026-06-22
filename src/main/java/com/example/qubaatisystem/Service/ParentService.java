@@ -16,6 +16,7 @@ import com.example.qubaatisystem.Repository.ParentRepository;
 import com.example.qubaatisystem.Repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,7 @@ public class ParentService {
     private final StudentService studentService;
     private final ChildLearningProfileService childLearningProfileService;
     private final ModelMapper modelMapper;
+    private final PasswordEncoder passwordEncoder;
 
     public List<ParentOutDTO> getAll() {
         return parentRepository.findAll()
@@ -53,7 +55,7 @@ public class ParentService {
         User user = new User();
         user.setUsername(parentInDTO.getUsername());
         user.setEmail(parentInDTO.getEmail());
-        user.setPassword(parentInDTO.getPassword());
+        user.setPassword(passwordEncoder.encode(parentInDTO.getPassword()));
         user.setRole(UserRole.PARENT);
         User savedUser = userRepository.save(user);
 
@@ -81,7 +83,7 @@ public class ParentService {
         User user = parent.getUser();
         user.setUsername(parentInDTO.getUsername());
         user.setEmail(parentInDTO.getEmail());
-        user.setPassword(parentInDTO.getPassword());
+        user.setPassword(passwordEncoder.encode(parentInDTO.getPassword()));
         user.setRole(UserRole.PARENT);
         userRepository.save(user);
 

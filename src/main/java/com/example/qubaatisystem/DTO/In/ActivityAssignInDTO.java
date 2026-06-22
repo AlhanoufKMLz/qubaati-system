@@ -17,7 +17,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class ActivityAssignInDTO {
 
-    @NotNull(message = "assignedByTeacherId is required")
+    // DEPRECATED actor id — IGNORED for the authenticated TEACHER (derived from Basic Auth);
+    // only an ADMIN may supply it to act on a teacher behalf. Optional; do not send it as a teacher.
     private Integer assignedByTeacherId;
 
     // Optional; if provided it must be in the future (validated in ActivityAssignmentService).

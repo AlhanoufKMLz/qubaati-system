@@ -30,6 +30,7 @@ public class StudentAnswerController {
 
     private final StudentAnswerService studentAnswerService;
     private final ActivitySubmissionService activitySubmissionService;
+    private final com.example.qubaatisystem.Security.SecurityOwnershipService security;
 
     // ---------- CRUD ----------
 
@@ -77,8 +78,10 @@ public class StudentAnswerController {
     public ResponseEntity<ActivitySubmissionOutDTO> manualGradeAnswer(
             @PathVariable Integer answerId,
             @Valid @RequestBody StudentAnswerManualGradeInDTO request) {
+        security.assertCurrentTeacherOwnsAnswerSubmissionOrAdmin(answerId);
+        Integer actingTeacherId = security.resolveOwningTeacherId(request.getTeacherId());
         return ResponseEntity.status(200).body(activitySubmissionService.manualGradeAnswer(
-                answerId, request.getTeacherId(), request.getEarnedPoints(),
+                answerId, actingTeacherId, request.getEarnedPoints(),
                 request.getStatus(), request.getFeedback()));
     }
 }

@@ -2,6 +2,7 @@ package com.example.qubaatisystem.Controller;
 
 import com.example.qubaatisystem.Api.ApiResponse;
 import com.example.qubaatisystem.DTO.In.ClassroomInDTO;
+import com.example.qubaatisystem.Security.SecurityOwnershipService;
 import com.example.qubaatisystem.Service.ClassroomService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,9 +22,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class ClassroomController {
 
     private final ClassroomService classroomService;
+    private final SecurityOwnershipService security;
 
+    // The classroom owner is derived from Basic Auth: a TEACHER owns it (body teacherId ignored); an ADMIN may
+    // supply teacherId to create on a teacher's behalf. The teacher free-plan limit then applies to that teacher.
     @PostMapping
     public ResponseEntity<?> create(@Valid @RequestBody ClassroomInDTO dto) {
+        dto.setTeacherId(security.resolveOwningTeacherId(dto.getTeacherId()));
         classroomService.create(dto);
         return ResponseEntity.status(200).body(new ApiResponse("Classroom created successfully"));
     }

@@ -6,6 +6,7 @@ import jakarta.validation.ConstraintViolationException;
 import org.hibernate.TypeMismatchException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
@@ -28,6 +29,12 @@ public class ControllerAdvice {
     @ExceptionHandler(value = ApiException.class)
     public ResponseEntity<?> handleApiException(ApiException e) {
         return ResponseEntity.status(400).body(new ApiResponse(e.getMessage()));
+    }
+
+    // Ownership / authorization denial thrown from controllers/services -> HTTP 403 (not the generic 400).
+    @ExceptionHandler(value = AccessDeniedException.class)
+    public ResponseEntity<?> handleAccessDenied(AccessDeniedException e) {
+        return ResponseEntity.status(403).body(new ApiResponse(e.getMessage()));
     }
 
     @ExceptionHandler(value = NoResourceFoundException.class)

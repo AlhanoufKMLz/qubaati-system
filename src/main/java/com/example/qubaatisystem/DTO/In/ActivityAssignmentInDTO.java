@@ -25,6 +25,7 @@ public class ActivityAssignmentInDTO {
 
     private Integer classroomId;
 
-    @NotNull(message = "assignedByTeacherId is required")
+    // DEPRECATED actor id — IGNORED for the authenticated TEACHER (derived from Basic Auth); only an ADMIN may
+    // supply it to act on a teacher's behalf. Optional; do not send it as a teacher.
     private Integer assignedByTeacherId;
 }

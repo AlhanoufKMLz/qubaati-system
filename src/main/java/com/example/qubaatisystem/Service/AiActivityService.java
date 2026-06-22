@@ -18,8 +18,10 @@ import com.example.qubaatisystem.Repository.ActivitySubmissionRepository;
 import com.example.qubaatisystem.Repository.OptionRepository;
 import com.example.qubaatisystem.Repository.QuestionRepository;
 import com.example.qubaatisystem.Repository.TeacherRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -33,17 +35,19 @@ import java.util.regex.Pattern;
  *
  * <p>Uses the OpenAI Chat API via Spring AI {@code ChatClient} (config keys {@code spring.ai.openai.api-key}
  * / {@code spring.ai.openai.chat.options.model}) — the same Spring AI configuration as the mission AiService.
- * If the API key is not configured, every AI text call falls back to a deterministic placeholder so the
- * endpoints remain usable and the project still compiles/runs.
  *
- * <p><b>Canonical storage vs. localized response:</b> generated/refined content and feedback are produced
- * and SAVED in canonical <b>English</b> (Activity.description is a short overview; questions/options live in
- * the Question/Option tables, never inside the description). The {@code language} request param (default
- * <b>en</b>) only affects the RESPONSE: when {@code language=ar}, user-facing text fields are localized to
- * Arabic for the response without overwriting the stored English values. Enums, ids, timestamps, scores,
- * statuses, types, difficulty, points and isCorrect are never translated. Arabic localization uses the
- * OpenAI translation call when a key exists; otherwise the stored English is returned (with a TODO).
+ * <p><b>Explicit AI endpoints fail fast.</b> {@code generateActivity}, {@code refineActivity} and
+ * {@code generateFeedback} require a configured provider and a real AI response — they NEVER silently return
+ * placeholder/template content. If the provider is unconfigured or the call/parse fails, a clear
+ * {@link ApiException} is thrown so the caller knows the AI was unavailable.
+ *
+ * <p><b>Canonical storage vs. localized response:</b> generated/refined content and feedback are produced and
+ * SAVED in canonical <b>English</b>. The {@code language} request param (default <b>en</b>) only affects the
+ * RESPONSE: when {@code language=ar}, user-facing text is localized to Arabic for the response without
+ * overwriting the stored English. Enums, ids, timestamps, scores, statuses, types, difficulty, points and
+ * isCorrect are never translated.
  */
+@Slf4j
 @Service
 public class AiActivityService {
 
@@ -54,6 +58,8 @@ public class AiActivityService {
     private final ActivitySubmissionService activitySubmissionService;
     private final ActivityService activityService;
     private final TeacherRepository teacherRepository;
+    private final AiProviderHealthService aiProviderHealthService;
+    private final ObjectMapper objectMapper;
 
     // Spring AI client. The API key and model come from spring.ai.openai.* (OPENAI_API_KEY / OPENAI_MODEL)
     // via Spring AI auto-configuration — exactly like Student 3's AiService. No manual key/model handling.
@@ -66,6 +72,8 @@ public class AiActivityService {
                              ActivitySubmissionService activitySubmissionService,
                              ActivityService activityService,
                              TeacherRepository teacherRepository,
+                             AiProviderHealthService aiProviderHealthService,
+                             ObjectMapper objectMapper,
                              ChatClient.Builder chatClientBuilder) {
         this.activityRepository = activityRepository;
         this.questionRepository = questionRepository;
@@ -74,11 +82,17 @@ public class AiActivityService {
         this.activitySubmissionService = activitySubmissionService;
         this.activityService = activityService;
         this.teacherRepository = teacherRepository;
+        this.aiProviderHealthService = aiProviderHealthService;
+        this.objectMapper = objectMapper;
         this.chatClient = chatClientBuilder.build();
     }
 
     // ====================== AI ENDPOINTS ======================
 
+    /**
+     * EXPLICIT AI endpoint: generates a full activity (description + real questions/options) by calling the AI
+     * and parsing strict JSON. Fails fast — never returns placeholder/template content.
+     */
     public ActivityDetailsOutDTO generateActivity(AiGenerateActivityInDTO dto, String language) {
         String lang = normalizeLanguage(language);
 
@@ -87,31 +101,22 @@ public class AiActivityService {
             throw new ApiException("questionCount must be between 1 and 20");
         }
 
-        // Generate clean CANONICAL ENGLISH content for storage (regardless of the requested language).
-        // The description is a SHORT overview only — the questions live in the Question table, not here.
-        String englishSystem = "You are an educational content generator. Respond in English only. "
-                + PLAIN_TEXT_RULES;
-        String englishUser = "Topic: " + dto.getTopic()
-                + ". Description: " + (dto.getDescription() == null ? "" : dto.getDescription())
-                + ". Type: " + dto.getType() + ". Difficulty: " + dto.getDifficulty()
-                + ". Write a one-paragraph activity overview of 1-2 sentences. Do not list the questions.";
+        // No silent fallback for this endpoint: require a configured provider, then actually call the AI.
+        aiProviderHealthService.requireConfigured();
+        GeneratedActivity generated = generateActivityViaAi(dto, questionCount);
 
-        // Always run AI output through cleanPlainText so no markdown / preamble / suggestion text is stored.
-        String englishDescription = cleanPlainText(aiText(englishSystem, englishUser));
-        if (englishDescription == null || englishDescription.isBlank()) {
-            englishDescription = "This activity helps students understand " + dto.getTopic()
-                    + " through simple, real-life questions suited to their level.";
-        }
-
+        // Persist the AI-generated content as canonical English. cleanPlainText keeps stored text clean.
         Activity activity = new Activity();
-        activity.setTitle(cleanPlainText("Activity: " + dto.getTopic()));
-        activity.setDescription(cleanPlainText(englishDescription));
+        String title = notBlank(generated.title) ? generated.title : "Activity: " + dto.getTopic();
+        String description = notBlank(generated.description)
+                ? generated.description
+                : "This activity helps students understand " + dto.getTopic() + ".";
+        activity.setTitle(cleanPlainText(title));
+        activity.setDescription(cleanPlainText(description));
         activity.setType(dto.getType());
         activity.setDifficulty(dto.getDifficulty());
         activity.setMaxScore(dto.getMaxScore());
         activity.setStatus(ActivityStatus.DRAFT);
-        // Optional teacher ownership (Student 1): when a teacherId is supplied, the generated activity is owned
-        // by that teacher.
         if (dto.getTeacherId() != null) {
             Teacher owner = teacherRepository.findTeacherById(dto.getTeacherId());
             if (owner == null) {
@@ -119,43 +124,41 @@ public class AiActivityService {
             }
             activity.setCreatedByTeacher(owner);
         }
-        // Optional target skill (reuses ActivityService's resolver: skillId priority, else skillType, else null).
         activity.setSkill(activityService.resolveActivitySkill(dto.getSkillId(), dto.getSkillType()));
         Activity savedActivity = activityRepository.save(activity);
 
-        // Build realistic (non-placeholder) questions/options, stored in canonical English in their own
-        // tables. cleanPlainText guarantees the stored content stays clean plain text. Points are
-        // distributed so they sum to the activity's maxScore (Issue 9), e.g. 10 over 3 -> 4, 3, 3.
-        int[] questionPoints = distributePoints(dto.getMaxScore(), questionCount);
-        List<FallbackQuestion> fallbackQuestions = buildFallbackQuestions(dto.getTopic(), questionCount);
-        for (int i = 0; i < fallbackQuestions.size(); i++) {
-            FallbackQuestion fq = fallbackQuestions.get(i);
+        // Points are distributed so they sum to maxScore (e.g. 10 over 3 -> 4,3,3); the AI supplies content.
+        int[] questionPoints = distributePoints(dto.getMaxScore(), generated.questions.size());
+        for (int i = 0; i < generated.questions.size(); i++) {
+            GeneratedQuestion gq = generated.questions.get(i);
             Question question = new Question();
-            question.setContent(cleanPlainText(fq.content()));
+            question.setContent(cleanPlainText(gq.content));
             question.setType(QuestionType.MULTIPLE_CHOICE);
             question.setDifficulty(dto.getDifficulty());
             question.setPoints(questionPoints[i]);
-            question.setCorrectAnswer(cleanPlainText(fq.correctAnswer()));
+            question.setCorrectAnswer(cleanPlainText(gq.correctAnswer));
             question.setActivity(savedActivity);
             Question savedQuestion = questionRepository.save(question);
 
-            for (FallbackOption opt : fq.options()) {
+            for (GeneratedOption opt : gq.options) {
                 Option option = new Option();
-                option.setContent(cleanPlainText(opt.content()));
-                option.setIsCorrect(opt.correct());
+                option.setContent(cleanPlainText(opt.content));
+                option.setIsCorrect(Boolean.TRUE.equals(opt.isCorrect));
                 option.setQuestion(savedQuestion);
                 optionRepository.save(option);
             }
         }
 
-        // Issue 3: a freshly generated activity goes straight to the review queue. submitForReview is the
-        // existing service helper (no public submit-for-review endpoint anymore); it transitions
-        // DRAFT -> PENDING_REVIEW. The activity is still NOT assignable until a teacher APPROVES it.
+        // A freshly generated activity goes straight to the review queue (DRAFT -> PENDING_REVIEW). Still not
+        // assignable until a teacher APPROVES it.
         activityService.submitForReview(savedActivity.getId());
         Activity pendingActivity = activityRepository.findActivityById(savedActivity.getId());
+        log.info("AI Activity Generation completed successfully. activityId={} questions={}",
+                savedActivity.getId(), generated.questions.size());
         return buildActivityDetailsOutDTO(pendingActivity, lang);
     }
 
+    /** EXPLICIT AI endpoint: refines the activity description via the AI. Fails fast — no silent fallback. */
     public ActivityDetailsOutDTO refineActivity(Integer activityId, String instruction, String language) {
         String lang = normalizeLanguage(language);
 
@@ -163,54 +166,52 @@ public class AiActivityService {
         if (activity == null) {
             throw new ApiException("Activity with id " + activityId + " not found");
         }
-        // Issue 4: refine is allowed before approval (DRAFT/REJECTED/PENDING_REVIEW), not after.
         if (activity.getStatus() != ActivityStatus.DRAFT
                 && activity.getStatus() != ActivityStatus.REJECTED
                 && activity.getStatus() != ActivityStatus.PENDING_REVIEW) {
             throw new ApiException("Only DRAFT, REJECTED or PENDING_REVIEW activities can be refined");
         }
 
-        // The instruction is optional (Issue 1): apply a safe default when it is blank/missing.
         String effectiveInstruction = (instruction == null || instruction.isBlank())
                 ? "Improve the clarity and quality of this activity while keeping the same educational level."
                 : instruction;
 
-        // Refine and store canonical ENGLISH content (overview only; not the question list).
+        aiProviderHealthService.requireConfigured();
+        log.info("AI Activity Refinement started. model={} configured=true activityId={}",
+                aiProviderHealthService.getModel(), activityId);
+
         String englishSystem = "You refine educational activities. Respond in English only. " + PLAIN_TEXT_RULES;
         String englishUser = "Activity title: " + activity.getTitle()
                 + ". Current description: " + (activity.getDescription() == null ? "" : activity.getDescription())
                 + ". Instruction: " + effectiveInstruction
                 + ". Return only the refined one-paragraph description.";
 
-        // Always run AI output through cleanPlainText so no markdown / preamble / suggestion text is stored.
-        String refinedEnglish = cleanPlainText(aiText(englishSystem, englishUser));
+        String refinedEnglish = cleanPlainText(callOpenAiOrThrow(englishSystem, englishUser, "AI activity refinement"));
         if (refinedEnglish == null || refinedEnglish.isBlank()) {
-            // No API key: keep the existing (already clean) description rather than storing assistant chatter.
-            refinedEnglish = cleanPlainText(activity.getDescription());
+            throw new ApiException("AI activity refinement returned empty content.");
         }
 
-        // Only the description is refined; unrelated fields (type/difficulty/maxScore) are untouched.
-        // Refining means the activity is ready to be reviewed again -> PENDING_REVIEW (Issue 4).
         activity.setDescription(refinedEnglish);
         activity.setStatus(ActivityStatus.PENDING_REVIEW);
         activityRepository.save(activity);
+        log.info("AI Activity Refinement completed successfully. activityId={}", activityId);
 
         return buildActivityDetailsOutDTO(activity, lang);
     }
 
     /**
-     * MANUAL / admin re-grade endpoint. The normal student flow no longer needs it — {@code submitActivity}
-     * evaluates automatically. The actual grading lives in {@link ActivitySubmissionService#regrade} (single
-     * source of truth) so the logic is never duplicated. Kept for ad-hoc re-grading and debugging.
+     * MANUAL / admin re-grade endpoint. This is a GRADING operation, not AI content generation: MULTIPLE_CHOICE
+     * / TRUE_FALSE grade deterministically from stored correctness, and only free-text answers use AI grading
+     * (with a deterministic comparison fallback). The grading logic lives once in
+     * {@link ActivitySubmissionService#regrade}. It is therefore intentionally NOT gated on an AI key.
      */
     public ActivitySubmissionOutDTO evaluateSubmission(Integer submissionId, String language) {
         return activitySubmissionService.regrade(submissionId, language);
     }
 
     /**
-     * Teacher/reviewer view (Issue 8): the full activity details, INCLUDING correctAnswer and each option's
-     * isCorrect (reuses the same {@link #buildActivityDetailsOutDTO} as AI generate/refine). This is NOT
-     * student-safe and must only be exposed to teacher/reviewer/admin endpoints.
+     * Teacher/reviewer view: the full activity details INCLUDING correctAnswer and each option's isCorrect.
+     * NOT student-safe — only for teacher/reviewer/admin endpoints.
      */
     public ActivityDetailsOutDTO getActivityDetails(Integer activityId, String language) {
         String lang = normalizeLanguage(language);
@@ -221,6 +222,7 @@ public class AiActivityService {
         return buildActivityDetailsOutDTO(activity, lang);
     }
 
+    /** EXPLICIT AI endpoint: generates submission feedback via the AI. Fails fast — no silent fallback. */
     public ActivitySubmissionOutDTO generateFeedback(Integer submissionId, String audience, String language) {
         String lang = normalizeLanguage(language);
         String targetAudience = normalizeAudience(audience);
@@ -230,12 +232,16 @@ public class AiActivityService {
             throw new ApiException("ActivitySubmission with id " + submissionId + " not found");
         }
 
-        // Build and store canonical ENGLISH feedback (clean plain text).
-        String englishSystem = "You are an educational assistant. Write feedback addressed to the " + targetAudience + " in English. " + PLAIN_TEXT_RULES;
+        aiProviderHealthService.requireConfigured();
+        log.info("AI Feedback Generation started. model={} configured=true submissionId={} audience={}",
+                aiProviderHealthService.getModel(), submissionId, targetAudience);
+
+        String englishSystem = "You are an educational assistant. Write feedback addressed to the "
+                + targetAudience + " in English. " + PLAIN_TEXT_RULES;
         String englishUser = "Submission score: " + submission.getScore() + ", status: " + submission.getStatus() + ".";
-        String englishFeedback = cleanPlainText(aiText(englishSystem, englishUser));
+        String englishFeedback = cleanPlainText(callOpenAiOrThrow(englishSystem, englishUser, "AI feedback generation"));
         if (englishFeedback == null || englishFeedback.isBlank()) {
-            englishFeedback = "Feedback for the " + targetAudience + ": current score " + submission.getScore() + ".";
+            throw new ApiException("AI feedback generation returned empty content.");
         }
 
         submission.setAiFeedback(englishFeedback);
@@ -243,28 +249,211 @@ public class AiActivityService {
 
         ActivitySubmissionOutDTO out = activitySubmissionService.getById(submissionId);
         if (isArabic(lang)) {
+            // Translation is a localization step on REAL AI feedback; keep the English original if it is
+            // unavailable (this is the genuine AI output, not fabricated fallback content).
             String arabicFeedback = cleanPlainText(translateToArabic(englishFeedback));
-            if (arabicFeedback == null || arabicFeedback.isBlank()) {
-                arabicFeedback = "ملاحظات لـ " + targetAudience + ": النتيجة الحالية " + submission.getScore() + ".";
-            }
-            out.setAiFeedback(arabicFeedback);
+            out.setAiFeedback(arabicFeedback == null || arabicFeedback.isBlank() ? englishFeedback : arabicFeedback);
         }
+        log.info("AI Feedback Generation completed successfully. submissionId={}", submissionId);
         return out;
     }
 
-    // ====================== helpers ======================
+    // ====================== AI activity JSON generation ======================
 
     /**
-     * Builds the detailed, organized activity response (with nested questions/options) from the stored
-     * canonical-English entities, localizing user-facing text to Arabic when requested. Questions are
-     * fetched via {@code findQuestionsByActivityId} and each question's options via
-     * {@code findOptionsByQuestionId}. Ids/enums/timestamps/points/isCorrect are never translated.
+     * Calls the AI for the full activity JSON, retrying ONCE with a stricter prompt if the first response is
+     * not valid JSON, then validates the parsed content (rejecting placeholder/template text). Throws a clear
+     * {@link ApiException} on provider failure, unparseable output, or placeholder content.
      */
+    private GeneratedActivity generateActivityViaAi(AiGenerateActivityInDTO dto, int questionCount) {
+        log.info("AI Activity Generation started. model={} configured=true topic=\"{}\" questions={}",
+                aiProviderHealthService.getModel(), dto.getTopic(), questionCount);
+
+        String raw = callOpenAiOrThrow(activitySystemPrompt(false), activityUserPrompt(dto, questionCount),
+                "AI activity generation");
+        GeneratedActivity parsed = tryParseActivity(raw);
+
+        if (parsed == null) {
+            log.warn("AI Activity Generation: first response was not valid JSON — retrying once with a stricter prompt.");
+            String retry = callOpenAiOrThrow(activitySystemPrompt(true), activityUserPrompt(dto, questionCount),
+                    "AI activity generation");
+            parsed = tryParseActivity(retry);
+        }
+
+        if (parsed == null) {
+            log.warn("AI Activity Generation failed: invalid JSON response after retry.");
+            throw new ApiException("AI activity generation returned invalid JSON.");
+        }
+
+        validateGenerated(parsed);
+        return parsed;
+    }
+
+    private String activitySystemPrompt(boolean strict) {
+        String base = "You are an educational content generator for school students. Generate REAL, "
+                + "grade-appropriate multiple-choice questions with genuine, specific answer options. NEVER use "
+                + "placeholder phrases such as \"An accurate statement about\", \"A common misconception about\", "
+                + "or \"A statement unrelated to\". Return STRICT JSON ONLY — a single JSON object, no markdown, "
+                + "no code fences, and no commentary before or after the JSON.";
+        if (strict) {
+            base += " CRITICAL: your previous output was not valid JSON. Output MUST be exactly one valid JSON "
+                    + "object and NOTHING else.";
+        }
+        return base;
+    }
+
+    private String activityUserPrompt(AiGenerateActivityInDTO dto, int questionCount) {
+        String context = (dto.getDescription() == null || dto.getDescription().isBlank())
+                ? "" : "Context: " + dto.getDescription() + ". ";
+        return "Topic: " + dto.getTopic() + ". " + context
+                + "Activity type: " + dto.getType() + ". Difficulty: " + dto.getDifficulty() + ". "
+                + "Generate exactly " + questionCount + " multiple-choice question(s). Each question must have a "
+                + "clear question 'content', a 'correctAnswer' string, and 3 to 4 'options', each option having "
+                + "'content' and a boolean 'isCorrect', with EXACTLY ONE correct option. Also write a "
+                + "one-sentence 'description' overview. Return JSON exactly in this shape: "
+                + "{\"title\":\"...\",\"description\":\"...\",\"questions\":[{\"content\":\"...\","
+                + "\"correctAnswer\":\"...\",\"options\":[{\"content\":\"...\",\"isCorrect\":true},"
+                + "{\"content\":\"...\",\"isCorrect\":false}]}]}";
+    }
+
+    private GeneratedActivity tryParseActivity(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return parseActivityJson(stripJsonFences(raw));
+        } catch (Exception e) {
+            return null; // signals "retry with stricter prompt" / "fail clearly"
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private GeneratedActivity parseActivityJson(String json) {
+        Map<String, Object> root = objectMapper.readValue(json, Map.class);
+        GeneratedActivity g = new GeneratedActivity();
+        g.title = asString(root.get("title"));
+        g.description = asString(root.get("description"));
+        g.questions = new ArrayList<>();
+
+        Object questionsObj = root.get("questions");
+        if (questionsObj instanceof List<?> questionList) {
+            for (Object qo : questionList) {
+                if (!(qo instanceof Map)) {
+                    continue;
+                }
+                Map<String, Object> qm = (Map<String, Object>) qo;
+                GeneratedQuestion gq = new GeneratedQuestion();
+                gq.content = asString(qm.get("content"));
+                gq.correctAnswer = asString(qm.get("correctAnswer"));
+                gq.options = new ArrayList<>();
+
+                Object optionsObj = qm.get("options");
+                if (optionsObj instanceof List<?> optionList) {
+                    for (Object oo : optionList) {
+                        if (!(oo instanceof Map)) {
+                            continue;
+                        }
+                        Map<String, Object> om = (Map<String, Object>) oo;
+                        GeneratedOption go = new GeneratedOption();
+                        go.content = asString(om.get("content"));
+                        Object ic = om.get("isCorrect");
+                        go.isCorrect = (ic instanceof Boolean) ? (Boolean) ic
+                                : Boolean.parseBoolean(String.valueOf(ic));
+                        gq.options.add(go);
+                    }
+                }
+                g.questions.add(gq);
+            }
+        }
+        return g;
+    }
+
+    private static final List<String> PLACEHOLDER_MARKERS = List.of(
+            "an accurate statement about",
+            "a common misconception about",
+            "a statement unrelated to");
+
+    private void validateGenerated(GeneratedActivity g) {
+        if (g.questions == null || g.questions.isEmpty()) {
+            throw new ApiException("AI activity generation returned no questions.");
+        }
+        for (GeneratedQuestion q : g.questions) {
+            if (q.content == null || q.content.isBlank() || q.options == null || q.options.size() < 2) {
+                throw new ApiException("AI activity generation returned an incomplete question.");
+            }
+            boolean anyCorrect = false;
+            for (GeneratedOption o : q.options) {
+                if (o.content == null || o.content.isBlank()) {
+                    throw new ApiException("AI activity generation returned an empty option.");
+                }
+                if (Boolean.TRUE.equals(o.isCorrect)) {
+                    anyCorrect = true;
+                }
+            }
+            if (!anyCorrect) {
+                throw new ApiException("AI activity generation returned a question with no correct option.");
+            }
+        }
+        if (containsPlaceholder(g)) {
+            log.warn("AI Activity Generation failed: response contained placeholder/template text.");
+            throw new ApiException("AI activity generation produced placeholder content; treated as a generation failure.");
+        }
+    }
+
+    private boolean containsPlaceholder(GeneratedActivity g) {
+        StringBuilder sb = new StringBuilder();
+        if (g.description != null) {
+            sb.append(g.description).append(' ');
+        }
+        for (GeneratedQuestion q : g.questions) {
+            if (q.content != null) {
+                sb.append(q.content).append(' ');
+            }
+            if (q.correctAnswer != null) {
+                sb.append(q.correctAnswer).append(' ');
+            }
+            for (GeneratedOption o : q.options) {
+                if (o.content != null) {
+                    sb.append(o.content).append(' ');
+                }
+            }
+        }
+        String lower = sb.toString().toLowerCase(Locale.ROOT);
+        for (String marker : PLACEHOLDER_MARKERS) {
+            if (lower.contains(marker)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Strips ```json / ``` fences and narrows to the first {...} object before JSON parsing. */
+    private String stripJsonFences(String content) {
+        if (content == null) {
+            return null;
+        }
+        String cleaned = content.trim();
+        if (cleaned.startsWith("```json")) {
+            cleaned = cleaned.substring(7).trim();
+        } else if (cleaned.startsWith("```")) {
+            cleaned = cleaned.substring(3).trim();
+        }
+        if (cleaned.endsWith("```")) {
+            cleaned = cleaned.substring(0, cleaned.length() - 3).trim();
+        }
+        int start = cleaned.indexOf('{');
+        int end = cleaned.lastIndexOf('}');
+        if (start >= 0 && end > start) {
+            cleaned = cleaned.substring(start, end + 1);
+        }
+        return cleaned;
+    }
+
+    // ====================== detailed response building ======================
+
     private ActivityDetailsOutDTO buildActivityDetailsOutDTO(Activity activity, String language) {
         boolean arabic = isArabic(language);
 
-        // cleanPlainText is applied to every user-facing text field (after optional Arabic localization),
-        // so neither the English values nor an OpenAI Arabic translation can leak markdown / preamble text.
         String title = cleanPlainText(arabic ? localizeOrKeep(activity.getTitle()) : activity.getTitle());
         String description = cleanPlainText(arabic ? localizeOrKeep(activity.getDescription()) : activity.getDescription());
 
@@ -289,8 +478,6 @@ public class AiActivityService {
                     optionDtos));
         }
 
-        // JSON keys stay stable/English; Arabic users additionally get display-only labels (fieldLabels).
-        // English responses leave fieldLabels null so it is omitted from the JSON.
         return new ActivityDetailsOutDTO(
                 activity.getId(),
                 title,
@@ -305,9 +492,8 @@ public class AiActivityService {
     }
 
     /**
-     * Translates English text to Arabic for the response. If no OpenAI key is configured the translation
-     * is unavailable, so the stored canonical English is returned.
-     * TODO: full Arabic localization of stored content requires an OpenAI key (one call per text field).
+     * Translates English text to Arabic for the response. If translation is unavailable the stored canonical
+     * English is returned (this is a localization step, not a content-generation fallback).
      */
     private String localizeOrKeep(String englishText) {
         String arabic = translateToArabic(englishText);
@@ -341,22 +527,14 @@ public class AiActivityService {
     }
 
     /**
-     * Returns the assistant text from OpenAI, or {@code null} when the call fails (e.g. no API key is
-     * configured), so callers fall back to a deterministic placeholder.
-     */
-    private String aiText(String systemPrompt, String userPrompt) {
-        return callOpenAi(systemPrompt, userPrompt);
-    }
-
-    /**
-     * Translates English text to Arabic via OpenAI. Returns {@code null} when the call fails (e.g. no API key)
-     * so callers can apply a fallback. Blank input is returned unchanged.
+     * Translates English text to Arabic via OpenAI. Returns {@code null} when the call fails so callers keep the
+     * English original (a localization fallback — NOT fabricated content). Blank input is returned unchanged.
      */
     private String translateToArabic(String englishText) {
         if (englishText == null || englishText.isBlank()) {
             return englishText;
         }
-        return callOpenAi(
+        return callOpenAiQuietly(
                 "You are a professional translator. Translate the value only into Modern Standard Arabic. "
                         + "Return plain text only. Do not add explanations. Do not add suggestions. "
                         + "Do not add markdown. Do not add line breaks. Return only the translation.",
@@ -364,26 +542,42 @@ public class AiActivityService {
     }
 
     /**
-     * Single Spring AI {@code ChatClient} call. Returns the assistant text, or {@code null} if the call fails
-     * (no/invalid key, network error, etc.) so callers apply their deterministic fallback. The API key and
-     * model are supplied by Spring AI config (spring.ai.openai.*); they are never read manually here.
+     * Spring AI {@code ChatClient} call for EXPLICIT endpoints — throws a clear {@link ApiException} on failure
+     * (never returns silent fallback). {@code op} labels the operation in the error/logs; credentials are never
+     * read or logged here (Spring AI supplies the key/model from config).
      */
-    private String callOpenAi(String systemPrompt, String userPrompt) {
+    private String callOpenAiOrThrow(String systemPrompt, String userPrompt, String op) {
         try {
-            return chatClient
-                    .prompt()
-                    .system(systemPrompt)
-                    .user(userPrompt)
-                    .call()
-                    .content();
+            return chatClient.prompt().system(systemPrompt).user(userPrompt).call().content();
         } catch (Exception e) {
+            log.warn("{} failed: provider call error: {}", op, e.getMessage());
+            throw new ApiException(op + " failed: " + safeReason(e));
+        }
+    }
+
+    /**
+     * Spring AI {@code ChatClient} call for the localization (translate) step only. Returns {@code null} on
+     * failure so the caller keeps the real English text — used by {@link #translateToArabic}.
+     */
+    private String callOpenAiQuietly(String systemPrompt, String userPrompt) {
+        try {
+            return chatClient.prompt().system(systemPrompt).user(userPrompt).call().content();
+        } catch (Exception e) {
+            log.warn("AI translation call failed (keeping English): {}", e.getMessage());
             return null;
         }
     }
 
+    private String safeReason(Exception e) {
+        String msg = e.getMessage();
+        if (msg == null || msg.isBlank()) {
+            return e.getClass().getSimpleName();
+        }
+        return msg.length() > 200 ? msg.substring(0, 200) : msg;
+    }
+
     // ====================== plain-text cleaning ======================
 
-    /** Reusable instruction appended to OpenAI prompts so the model returns clean plain text only. */
     private static final String PLAIN_TEXT_RULES =
             "The description must be plain text only. Do not use markdown. Do not use bullet points. "
                     + "Do not use line breaks. Do not include phrases like \"Here is\", \"This is\", "
@@ -394,24 +588,15 @@ public class AiActivityService {
     private static final Pattern LIST_NUMBERS = Pattern.compile("(?:^|\\s)\\d+[.)]\\s+");
     private static final Pattern MARKDOWN_CHARS = Pattern.compile("[*`#]");
     private static final Pattern MULTI_SPACE = Pattern.compile("\\s{2,}");
-    // Leading assistant preamble ending in a colon, e.g. "Here is a clearer version:".
     private static final Pattern EN_PREAMBLE = Pattern.compile(
             "(?i)^\\s*(?:sure|certainly|of course|okay|ok|here(?:'s| is)|this is|below is|the following is)[^:]*:\\s*");
-    // Trailing assistant suggestion, e.g. "If you want, I can also make it shorter.".
     private static final Pattern EN_SUGGESTION = Pattern.compile(
             "(?i)\\s*(?:if you(?:'d like| want| wish)|i can also|i could also|let me know|feel free|would you like|i hope this)\\b.*$");
-    // Arabic leading preamble ending in a colon, e.g. "إليك نسخة أوضح ... من الوصف:".
     private static final Pattern AR_PREAMBLE = Pattern.compile(
             "^\\s*(?:إليك|إليكم|إليكَ|هذه نسخة|هذه هي|هذا هو|فيما يلي)[^:]*:\\s*");
-    // Arabic trailing suggestion, e.g. "إذا أردت، يمكنني أيضًا ...".
     private static final Pattern AR_SUGGESTION = Pattern.compile(
             "\\s*(?:إذا أردت|إذا رغبت|إن أردت|وإذا أردت|يمكنني أيضًا|يمكنني أيضا|هل تريد).*$");
 
-    /**
-     * Normalizes AI text into one clean plain-text paragraph: drops line breaks, markdown markers, bullet
-     * and numbered-list prefixes, and common assistant preambles/suggestions (English and Arabic), then
-     * collapses whitespace and trims. Returns {@code null} for {@code null} input.
-     */
     private String cleanPlainText(String value) {
         if (value == null) {
             return null;
@@ -429,10 +614,6 @@ public class AiActivityService {
         return text;
     }
 
-    /**
-     * Display-only Arabic labels for the (stable, English) JSON keys of the detailed activity response.
-     * The JSON key names never change; this map only helps an Arabic UI render headings.
-     */
     private Map<String, String> arabicFieldLabels() {
         Map<String, String> labels = new LinkedHashMap<>();
         labels.put("id", "المعرّف");
@@ -452,12 +633,11 @@ public class AiActivityService {
         return labels;
     }
 
-    // ====================== fallback question generation ======================
+    // ====================== misc helpers + parse holders ======================
 
     /**
      * Distributes the activity's maxScore across {@code count} questions so the per-question points sum to
-     * maxScore (e.g. 10 over 3 -> [4, 3, 3]). When maxScore is null/zero, each question gets 1 point. Every
-     * question is guaranteed at least 1 point.
+     * maxScore (e.g. 10 over 3 -> [4, 3, 3]); each question is guaranteed at least 1 point.
      */
     private int[] distributePoints(Integer maxScore, int count) {
         int[] points = new int[count];
@@ -475,57 +655,29 @@ public class AiActivityService {
         return points;
     }
 
-    /**
-     * Builds realistic canonical-English questions when no AI key is configured. Speed/distance/time topics
-     * get computed word problems; any other topic gets meaningful (non-placeholder) comprehension questions.
-     */
-    private List<FallbackQuestion> buildFallbackQuestions(String topic, int count) {
-        String lower = topic == null ? "" : topic.toLowerCase(Locale.ROOT);
-        boolean speedTopic = lower.contains("speed") || lower.contains("distance") || lower.contains("velocity")
-                || (lower.contains("time") && (lower.contains("speed") || lower.contains("distance")))
-                || (topic != null && (topic.contains("سرعة") || topic.contains("مسافة") || topic.contains("الزمن")));
-        List<FallbackQuestion> list = new ArrayList<>();
-        for (int i = 1; i <= count; i++) {
-            list.add(speedTopic ? speedDistanceTimeQuestion(i) : genericQuestion(topic, i));
-        }
-        return list;
+    private boolean notBlank(String s) {
+        return s != null && !s.isBlank();
     }
 
-    private FallbackQuestion speedDistanceTimeQuestion(int index) {
-        int[] speeds = {30, 40, 50, 60, 20, 45};
-        int speed = speeds[(index - 1) % speeds.length];
-        int hours = 2 + ((index - 1) % 2);
-        int distance = speed * hours;
-        int lower = Math.max(5, speed - 10);
-        String correct = speed + " km/h";
-        String content = "A car travels " + distance + " kilometers in " + hours + " hours. What is its speed?";
-        List<FallbackOption> options = List.of(
-                new FallbackOption(correct, true),
-                new FallbackOption(lower + " km/h", false),
-                new FallbackOption(distance + " km/h", false));
-        return new FallbackQuestion(content, correct, options);
+    private String asString(Object value) {
+        return value == null ? null : String.valueOf(value);
     }
 
-    private FallbackQuestion genericQuestion(String topic, int index) {
-        String subject = (topic == null || topic.isBlank()) ? "this subject" : topic.trim();
-        String[] templates = {
-                "Which of the following statements about %s is correct?",
-                "What is the most accurate description of %s?",
-                "Choose the correct fact about %s.",
-                "Which option best explains %s?"
-        };
-        String content = String.format(templates[(index - 1) % templates.length], subject);
-        String correct = "An accurate statement about " + subject + ".";
-        List<FallbackOption> options = List.of(
-                new FallbackOption(correct, true),
-                new FallbackOption("A common misconception about " + subject + ".", false),
-                new FallbackOption("A statement unrelated to " + subject + ".", false));
-        return new FallbackQuestion(content, correct, options);
+    // Plain data holders for the AI JSON (populated manually from the parsed Map — no Jackson binding).
+    private static final class GeneratedActivity {
+        private String title;
+        private String description;
+        private List<GeneratedQuestion> questions;
     }
 
-    private record FallbackQuestion(String content, String correctAnswer, List<FallbackOption> options) {
+    private static final class GeneratedQuestion {
+        private String content;
+        private String correctAnswer;
+        private List<GeneratedOption> options;
     }
 
-    private record FallbackOption(String content, boolean correct) {
+    private static final class GeneratedOption {
+        private String content;
+        private Boolean isCorrect;
     }
 }

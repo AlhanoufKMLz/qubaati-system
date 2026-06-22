@@ -24,6 +24,7 @@ public class ClassroomInDTO {
     @Size(max = 20, message = "section must be at most 20 characters")
     private String section;
 
-    @NotNull(message = "teacherId is required")
+    // Optional: IGNORED when a TEACHER creates the classroom (the owner is derived from Basic Auth). Only an
+    // ADMIN may supply it to create a classroom on a teacher's behalf; a teacher can never set another teacher.
     private Integer teacherId;
 }
