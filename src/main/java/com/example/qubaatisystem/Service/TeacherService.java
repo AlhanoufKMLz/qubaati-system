@@ -23,6 +23,7 @@ public class TeacherService {
     private final TeacherRepository teacherRepository;
     private final UserRepository userRepository;
     private final TeacherDashboardService teacherDashboardService;
+    private final WhatsAppService whatsAppService;
     private final ModelMapper modelMapper;
 
     public List<TeacherOutDTO> getAll() {
@@ -56,6 +57,7 @@ public class TeacherService {
 
         teacher.setId(null);
         Teacher savedTeacher = teacherRepository.save(teacher);
+        whatsAppService.sendWelcomeMessage(savedTeacher.getPhoneNumber(), savedTeacher.getFullName(), "معلم");
         return mapTeacherToOutDTO(savedTeacher);
     }
 

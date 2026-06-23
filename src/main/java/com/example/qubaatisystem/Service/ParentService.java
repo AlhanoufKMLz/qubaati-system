@@ -31,6 +31,7 @@ public class ParentService {
     private final StudentService studentService;
     private final ChildLearningProfileService childLearningProfileService;
     private final StudentPortfolioPdfService studentPortfolioPdfService;
+    private final WhatsAppService whatsAppService;
     private final ModelMapper modelMapper;
 
     public List<ParentOutDTO> getAll() {
@@ -64,6 +65,7 @@ public class ParentService {
 
         parent.setId(null);
         Parent savedParent = parentRepository.save(parent);
+        whatsAppService.sendWelcomeMessage(savedParent.getPhoneNumber(), savedParent.getFullName(), "ولي أمر");
         return mapParentToOutDTO(savedParent);
     }
 

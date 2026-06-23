@@ -21,4 +21,5 @@ public class TeacherOutDTO {
     // ----- Teacher profile fields -----
     private String fullName;
     private String specialization;
+    private String phoneNumber;
 }

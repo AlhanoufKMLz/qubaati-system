@@ -33,4 +33,8 @@ public class TeacherInDTO {
     @NotBlank(message = "specialization is required")
     @Size(max = 120, message = "specialization must be at most 120 characters")
     private String specialization;
+
+    @NotBlank(message = "phoneNumber is required")
+    @Size(max = 30, message = "phoneNumber must be at most 30 characters")
+    private String phoneNumber;
 }

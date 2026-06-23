@@ -26,6 +26,9 @@ public class Teacher {
     @Column(length = 120)
     private String specialization;
 
+    @Column(length = 30)
+    private String phoneNumber;
+
     // Teacher belongs to one User (owning side)
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
