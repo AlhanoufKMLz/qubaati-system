@@ -481,10 +481,6 @@ This section lists the important business endpoints that are not simple CRUD.
 
 ---
 
-> I also implemented the reusable WhatsApp service and Arabic student portfolio PDF templates used by the parent and teacher flows.
-
----
-
 ## 🚀 How to Run Locally
 
 ### 1. Clone the repository
