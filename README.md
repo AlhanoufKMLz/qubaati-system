@@ -16,6 +16,7 @@
 ![n8n](https://img.shields.io/badge/n8n-Automation-orange)
 ![Twilio](https://img.shields.io/badge/Twilio-WhatsApp%20Notifications-red)
 ![Gmail](https://img.shields.io/badge/Gmail-Email%20Notifications-EA4335)
+![OpenHTMLtoPDF](https://img.shields.io/badge/OpenHTMLtoPDF-PDF%20Reports-0B3A3A)
 
 ---
 
