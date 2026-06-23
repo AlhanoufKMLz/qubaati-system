@@ -528,41 +528,6 @@ The backend will run on:
 ```text
 http://localhost:8080
 ```
-
----
-
-## 🧪 API Testing
-
-The project includes a Postman collection.
-
-Current API testing standards:
-
-* Each request uses role-specific Basic Auth.
-* No path variables are used.
-* IDs are sent in request bodies.
-* No actor IDs are accepted from the body.
-* Parent/teacher/student identity comes from Basic Auth.
-* Postman lint validates route correctness.
-
-Run the Postman collection in this order:
-
-```text
-01 - Setup / Seed
-02 - AI Activity Generation
-03 - Activity Review
-04 - Classroom and Enrollment
-05 - Assignment
-06 - Student Submission
-07 - Grading and Feedback
-08 - Mission Flow
-09 - Short Answer / AI Grading
-10 - Dashboards
-11 - Parent Reports
-12 - Payments / Subscriptions
-13 - n8n Weekly Reports
-14 - Security Negative Tests
-```
-
 ---
 
 ## 🧭 Main Business Flow
