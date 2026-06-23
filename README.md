@@ -257,9 +257,8 @@ This section lists the important business endpoints that are not simple CRUD.
 
 > Note: The project follows a body-based ID style. Resource IDs such as `studentId`, `activityId`, `assignmentId`, and `submissionId` are sent in the request body, not in the URL path.
 
----
 
-### 🔐 AI Endpoints
+## 🔐 AI Endpoints
 
 | Method | Endpoint                                            | Role          | Description                           |
 | ------ | --------------------------------------------------- | ------------- | ------------------------------------- |
@@ -273,9 +272,8 @@ This section lists the important business endpoints that are not simple CRUD.
 | `POST` | `/api/v1/ai/parents/me/children/summary`            | Parent        | Generate AI child summary             |
 | `POST` | `/api/v1/ai/teachers/me/dashboard-insight`          | Teacher       | Generate teacher dashboard insight    |
 
----
 
-### 👨‍👩‍👧 Parent Endpoints
+## 👨‍👩‍👧 Parent Endpoints
 
 | Method | Endpoint                                       | Role   | Description                             |
 | ------ | ---------------------------------------------- | ------ | --------------------------------------- |
@@ -291,9 +289,8 @@ This section lists the important business endpoints that are not simple CRUD.
 | `GET`  | `/api/v1/parents/me/weekly-reports/latest`     | Parent | Get latest weekly report                |
 | `POST` | `/api/v1/parents/weekly-reports/generate-all`  | Admin  | Generate weekly reports for all parents |
 
----
 
-### 👨‍🏫 Teacher Endpoints
+## 👨‍🏫 Teacher Endpoints
 
 | Method | Endpoint                         | Role    | Description        |
 | ------ | -------------------------------- | ------- | ------------------ |
@@ -302,9 +299,8 @@ This section lists the important business endpoints that are not simple CRUD.
 | `GET`  | `/api/v1/teachers/me/students`   | Teacher | Teacher students   |
 | `GET`  | `/api/v1/teachers/me/activities` | Teacher | Teacher activities |
 
----
 
-### 🏫 Classroom Endpoints
+## 🏫 Classroom Endpoints
 
 | Method | Endpoint                             | Role          | Description                   |
 | ------ | ------------------------------------ | ------------- | ----------------------------- |
@@ -313,9 +309,8 @@ This section lists the important business endpoints that are not simple CRUD.
 | `POST` | `/api/v1/classrooms/dashboard`       | Teacher/Admin | Classroom dashboard           |
 | `POST` | `/api/v1/classrooms/progress`        | Teacher/Admin | Classroom progress            |
 
----
 
-### 🧪 Activity Review and Assignment Endpoints
+## 🧪 Activity Review and Assignment Endpoints
 
 | Method | Endpoint                                        | Role          | Description                    |
 | ------ | ----------------------------------------------- | ------------- | ------------------------------ |
@@ -331,9 +326,8 @@ This section lists the important business endpoints that are not simple CRUD.
 | `POST` | `/api/v1/activity-assignments/expire-overdue`   | Teacher/Admin | Mark overdue assignments       |
 | `POST` | `/api/v1/activity-assignments/due-soon`         | Teacher/Admin | Send due-soon notifications    |
 
----
 
-### 📝 Activity Submission Endpoints
+## 📝 Activity Submission Endpoints
 
 | Method | Endpoint                                         | Role          | Description                      |
 | ------ | ------------------------------------------------ | ------------- | -------------------------------- |
@@ -349,18 +343,16 @@ This section lists the important business endpoints that are not simple CRUD.
 | `POST` | `/api/v1/activity-submissions/reopen`            | Teacher/Admin | Reopen submission                |
 | `POST` | `/api/v1/activity-submissions/pending-grading`   | Teacher/Admin | List pending grading submissions |
 
----
 
-### ✍️ Student Answer Endpoints
+## ✍️ Student Answer Endpoints
 
 | Method  | Endpoint                        | Role          | Description           |
 | ------- | ------------------------------- | ------------- | --------------------- |
 | `POST`  | `/api/v1/student-answers/batch` | Student/Admin | Save batch answers    |
 | `PATCH` | `/api/v1/student-answers/grade` | Teacher/Admin | Manually grade answer |
 
----
 
-### 👧 Student Self-Service Endpoints
+## 👧 Student Self-Service Endpoints
 
 | Method | Endpoint                                         | Role    | Description                |
 | ------ | ------------------------------------------------ | ------- | -------------------------- |
@@ -372,9 +364,8 @@ This section lists the important business endpoints that are not simple CRUD.
 | `POST` | `/api/v1/students/me/recommendations/regenerate` | Student | Regenerate recommendations |
 | `GET`  | `/api/v1/students/me/skills`                     | Student | Student skills             |
 
----
 
-### 🎮 Mission Flow Endpoints
+## 🎮 Mission Flow Endpoints
 
 | Method   | Endpoint                                      | Role          | Description                 |
 | -------- | --------------------------------------------- | ------------- | --------------------------- |
@@ -387,9 +378,8 @@ This section lists the important business endpoints that are not simple CRUD.
 | `POST`   | `/api/v1/missions/steps/get`                  | Admin         | Get mission steps           |
 | `DELETE` | `/api/v1/missions/steps/delete`               | Admin         | Delete mission steps        |
 
----
 
-### 💡 Recommendation and Notification Endpoints
+## 💡 Recommendation and Notification Endpoints
 
 | Method | Endpoint                                  | Role          | Description                    |
 | ------ | ----------------------------------------- | ------------- | ------------------------------ |
@@ -401,9 +391,8 @@ This section lists the important business endpoints that are not simple CRUD.
 | `POST` | `/api/v1/users/me/notifications/read`     | Authenticated | Mark notification as read      |
 | `POST` | `/api/v1/users/me/notifications/read-all` | Authenticated | Mark all notifications as read |
 
----
 
-### 💳 Payment and Subscription Endpoints
+## 💳 Payment and Subscription Endpoints
 
 | Method | Endpoint                                   | Role          | Description                 |
 | ------ | ------------------------------------------ | ------------- | --------------------------- |
